@@ -30,6 +30,12 @@ CFLAGS := -g -fpic -shared -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB
 
 LDFLAGS := -o $(OUT) -export-dynamic -llua
 
+compileflags:
+	@echo -I  > compile_flags.txt
+	@echo include/ >> compile_flags.txt
+	@echo -Wall >> compile_flags.txt
+	@echo $(LUA_CFLAGS) >> compile_flags.txt
+
 build: $(OUT)
 rustbuild: $(OUT_RUST_LIB)
 
@@ -47,7 +53,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
-run: clean build
+run: build
 	./$(OUT)
 
 test: CFLAGS += -DLY_TEST
@@ -63,4 +69,4 @@ valgrind: shell
 	valgrind ./$(OUT)
 
 
-.PHONY: rustbuild build run test clean cmds source $(OUT_RUST_LIB)
+.PHONY: rustbuild build run test clean cmds source $(OUT_RUST_LIB) compileflags
