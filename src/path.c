@@ -7,6 +7,7 @@
 #include <ly_string.h>
 #include <path.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <utils.h>
 
 static struct PathSegment build_segment(const struct String name) {
@@ -22,6 +23,15 @@ static struct PathSegment build_segment(const struct String name) {
         .ty   = NAMED_PATH,
         .name = name,
     };
+}
+
+bool path_is_dir(const struct Path* const p) {
+    char* path_str = get_path_string(*p);
+    struct stat s  = {};
+    stat(path_str, &s);
+    bool isdir = S_ISDIR(s.st_mode);
+
+    return isdir;
 }
 
 void push_name(struct Path* path, const char* name) {

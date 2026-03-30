@@ -54,6 +54,7 @@ int main(const int argc, const char* argv[]) {
 
     if (is_debug(args)) {
         state.vars.debug = true;
+        debug_printf("running in debug mode\n");
     }
     script = get_script(args);
     if (script != NULL) {

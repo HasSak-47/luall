@@ -1,2 +1,2 @@
-core = plugin.load("app://core")
+core = rewsh.plugin.load("app://test")
 core:setup()

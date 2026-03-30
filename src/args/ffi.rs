@@ -22,7 +22,7 @@ pub unsafe extern "C" fn parse_args(argc: c_int, argv: *const *const c_char) -> 
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn is_debug(args: *const Args) -> bool {
+pub unsafe extern "C" fn is_debug(args: *const Args) -> bool {
     if args.is_null() {
         return false;
     }

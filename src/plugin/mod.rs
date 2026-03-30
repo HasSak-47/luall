@@ -52,7 +52,7 @@ pub struct Dependency {
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Manifest {
-    pub header: ManifestHeader,
+    pub plugin: ManifestHeader,
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependecies: Vec<Dependency>,
@@ -64,10 +64,10 @@ pub struct Plugin {
 }
 
 impl Manifest {
-    pub fn load_app<P: AsRef<Path>>(path: P) -> Result<Plugin> {
+    pub fn load_app_plugin<P: AsRef<Path>>(path: P) -> Result<Plugin> {
         let path = path.as_ref();
         // TODO: add toggle
-        let mut plugin_path = PathBuf::from(".");
+        let mut plugin_path = PathBuf::from("./plugins");
 
         plugin_path.push(path);
         let mut manifest_path = plugin_path.clone();
@@ -86,7 +86,7 @@ impl Manifest {
     pub fn get_manifest(source: url::Url) -> Result<Plugin> {
         let scheme = source.scheme();
         match scheme {
-            "app" => Self::load_app(source.host_str().unwrap()),
+            "app" => Self::load_app_plugin(source.host_str().unwrap()),
             "http" | "https" => todo!("http requests not available yet"),
             _ => bail!("unsupported source location: {source}"),
         }

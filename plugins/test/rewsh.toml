@@ -2,4 +2,4 @@
 name = "test_c_plugin"
 version = "0.1.0"
 edition = "0.1.0"
-kind = "c"
+kind = "C"

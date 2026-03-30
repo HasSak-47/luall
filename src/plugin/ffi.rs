@@ -1,9 +1,16 @@
-use std::{
-    ffi::{CStr, CString, c_char},
-    path::PathBuf,
-};
+use std::ffi::{CStr, CString, c_char};
 
 use crate::plugin::{Manifest, Plugin, PluginKind};
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn plugin_get_name(plugin: *mut Plugin) -> *mut c_char {
+    let plugin = unsafe { &*plugin };
+
+    let s = CString::new(plugin.manifest.plugin.name.as_str()).unwrap();
+
+    return s.into_raw();
+}
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
@@ -29,5 +36,5 @@ pub extern "C" fn get_plugin(path: *const c_char) -> *mut Plugin {
 #[allow(unused)]
 #[unsafe(no_mangle)]
 pub extern "C" fn plugin_get_kind(plugin: *mut Plugin) -> PluginKind {
-    return unsafe { &*plugin }.manifest.header.kind.clone();
+    return unsafe { &*plugin }.manifest.plugin.kind.clone();
 }

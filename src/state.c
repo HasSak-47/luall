@@ -1,12 +1,13 @@
-
 #include <lauxlib.h>
 #include <lua.h>
 
 #include <bindgen.h>
 #include <debug.h>
 #include <path.h>
+#include <plugin/loaders.h>
 #include <state.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,6 +15,7 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "lualib.h"
 #include "plugin/definitions.h"
 
 struct ShellState state = {};
@@ -44,31 +46,23 @@ void init_shell_config() {
     expand_path(&state.config.config, &state.vars.cwd);
 }
 
-struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
-    struct PluginHandler handler = {};
-    handler.plugin               = p;
-    char* path_str               = plugin_get_path(handler.plugin);
-    struct Path path             = parse_path(path_str);
-    free(path_str);
-
-    return handler;
-}
-
 int plugin_load(lua_State* L) {
     const char* path     = lua_tostring(L, -1);
     struct Plugin* p     = get_plugin(path);
     enum PluginKind kind = plugin_get_kind(p);
+    debug_printf("loading plugin @ %s\n", path);
 
     switch (kind) {
     case PLUGIN_KIND_C:
+        load_c_plugin(L, p);
         break;
     case PLUGIN_KIND_LUA:
         break;
     default:
         break;
-
         return 0;
     }
+
     return 1;
 }
 
@@ -97,6 +91,7 @@ void init_plugin_table() {
  */
 void init_shell_state() {
     state.L = luaL_newstate();
+    luaL_openlibs(state.L);
     lua_newtable(state.L);
     init_plugin_table();
     lua_setfield(state.L, -2, "plugin");
@@ -109,6 +104,7 @@ void init_shell_state() {
     init_shell_config();
 
     char* path = get_path_string(state.config.config);
+    debug_printf("running init: %s\n", path);
     luaL_dofile(state.L, path);
     free(path);
 }

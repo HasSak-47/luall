@@ -2,4 +2,7 @@
 -fPIC
 -Wall
 -Wextra
--I../../include
+-I
+../../include/
+-Wall
+-I/usr/include/lua5.4
