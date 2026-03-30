@@ -41,7 +41,7 @@ void __vector_concat(
 
 #define vector_push(__vector, __v_data)                                        \
     {                                                                          \
-        const typeof(__v_data) __vector_data = (__v_data);                     \
+        const typeof(*(__vector).data) __vector_data = (__v_data);             \
         __vector_push((struct __Vector*)&(__vector), &__vector_data,           \
             sizeof(*(__vector).data));                                         \
     }
