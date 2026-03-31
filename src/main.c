@@ -10,7 +10,6 @@
 #include <lualib.h>
 
 #include <dlfcn.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>

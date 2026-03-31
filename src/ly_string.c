@@ -1,6 +1,8 @@
 #include "ly_string.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "debug.h"
 #include "utils.h"
 
 struct String string_read_n(const char* chrs, const size_t len) {
@@ -20,6 +22,21 @@ char* string_to_cstring(const struct String chars) {
     s[chars.len] = 0;
 
     return s;
+}
+
+TEST(test_string_to_cstring) {
+    const char* test_string = "test string";
+    struct String str       = string_from_cstr(test_string);
+    char* other             = string_to_cstring(str);
+
+    int ok = strcmp(other, test_string) != 0;
+    if (ok) {
+        printf("strings: '%s' '%s'\n", other, test_string);
+    }
+    free(other);
+    free(str.data);
+
+    return ok;
 }
 
 struct String substring(struct String v, const size_t beg, const size_t end) {

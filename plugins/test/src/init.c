@@ -1,7 +1,5 @@
 #include <plugin/definitions.h>
-#include <stdio.h>
 
-int plugin_setup(lua_State* L) {
-    printf("hello world!");
+int plugin_setup(lua_State* _) {
     return 0;
 }

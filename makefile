@@ -26,9 +26,11 @@ OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o,$(SRCS)) $(OUT_RUST_LIB)
 OUT := rewsh
 
 CC := gcc
-CFLAGS := -g -fpic -shared -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
+CFLAGS := -g -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
 
 LDFLAGS := -o $(OUT) -export-dynamic -llua
+
+build: $(OUT)
 
 compileflags:
 	@echo -I  > compile_flags.txt
@@ -36,7 +38,6 @@ compileflags:
 	@echo -Wall >> compile_flags.txt
 	@echo $(LUA_CFLAGS) >> compile_flags.txt
 
-build: $(OUT)
 rustbuild: $(OUT_RUST_LIB)
 
 $(OUT): $(OBJS)
@@ -48,7 +49,7 @@ $(OUT_RUST_LIB): Cargo.toml
 	cbindgen -c ./cbindgen.toml --output include/bindgen.h
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	$(CC) $(CFLAGS) $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)

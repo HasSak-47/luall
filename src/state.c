@@ -41,32 +41,52 @@ void init_shell_variables() {
 void init_shell_config() {
     state.config.plugins = parse_path(PLUGIN_PATH);
     state.config.config  = parse_path(CONFIG_PATH);
+    state.config.cache   = parse_path(CACHE_PATH);
 
     expand_path(&state.config.plugins, &state.vars.cwd);
     expand_path(&state.config.config, &state.vars.cwd);
+    expand_path(&state.config.cache, &state.vars.cwd);
+}
+
+int c_plugin_setup(lua_State* L) {
+    lua_getfield(L, -1, "handler");
+    struct PluginHandler* handler = lua_touserdata(L, -1);
+
+    return handler->c.setup(L);
 }
 
 int plugin_load(lua_State* L) {
+    debug_printf("loading plugin...\n");
     const char* path     = lua_tostring(L, -1);
     struct Plugin* p     = get_plugin(path);
     enum PluginKind kind = plugin_get_kind(p);
     debug_printf("loading plugin @ %s\n", path);
 
     switch (kind) {
-    case PLUGIN_KIND_C:
-        load_c_plugin(L, p);
-        break;
+    case PLUGIN_KIND_C: {
+        struct PluginHandler handler = load_c_plugin(L, p);
+        debug_printf("loading c plugin into the internal state\n", path);
+        vector_push(state.plugins, handler);
+        struct PluginHandler* ptr = &state.plugins.data[state.plugins.len - 1];
+
+        debug_printf(
+            "building lua plugin handler with lightuserdata %p\n", ptr);
+        lua_createtable(L, 0, 0);
+        lua_pushlightuserdata(L, ptr);
+        lua_setfield(L, -2, "handler");
+        lua_pushcfunction(L, c_plugin_setup);
+        lua_setfield(L, -2, "setup");
+    } break;
     case PLUGIN_KIND_LUA:
-        break;
+        // TODO: lua plugins
     default:
-        break;
         return 0;
     }
 
     return 1;
 }
 
-int plugin_setup(lua_State* L) {
+int empty_plugin_setup(lua_State* L) {
     return 0;
 }
 
@@ -78,7 +98,7 @@ void init_plugin_table() {
     lua_setfield(state.L, -2, "load");
 
     /* plugins.setup = l_plugin_setup (method available via metatable) */
-    lua_pushcfunction(state.L, plugin_setup);
+    lua_pushcfunction(state.L, empty_plugin_setup);
     lua_setfield(state.L, -2, "setup");
 
     /* plugins.__index = plugins (for method lookup) */
@@ -105,7 +125,11 @@ void init_shell_state() {
 
     char* path = get_path_string(state.config.config);
     debug_printf("running init: %s\n", path);
-    luaL_dofile(state.L, path);
+    if (luaL_dofile(state.L, path) != LUA_OK) {
+        const char* err = lua_tostring(state.L, -1); // error message on stack
+        printf("Lua error: %s\n", err);
+        lua_pop(state.L, 1); // remove error message
+    }
     free(path);
 }
 

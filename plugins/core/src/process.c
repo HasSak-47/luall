@@ -15,6 +15,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <lauxlib.h>
+#include <lua.h>
+
 /**
  * cmd | cmd
  * cmd > &fd/file
@@ -23,9 +26,6 @@
  * cmd |& cmd === cmd 2>&1 | cmd
  */
 
-/**
- * @luabind = Luall.api.Pipe.new
- */
 struct Pipe new_pipe() {
     struct Pipe p = {};
     int r         = pipe(p.p);
@@ -35,9 +35,6 @@ struct Pipe new_pipe() {
     return p;
 }
 
-/**
- * @luabind Luall.api.Pipe:close
- */
 void close_pipe(struct Pipe* p) {
     close(p->p[0]);
     close(p->p[1]);
@@ -45,7 +42,6 @@ void close_pipe(struct Pipe* p) {
 
 /**
  * takes an string cmd and clones it
- * @luabind = Luall.api.Command.new
  */
 struct Command new_command(const char* cmd) {
     struct Command c = {
@@ -62,9 +58,6 @@ struct Command new_command(const char* cmd) {
     return c;
 }
 
-/**
- * @luabind Luall.api.Command:bind_pipe
- */
 void bind_pipe(struct Command* cmd, struct Pipe* pipe, enum BindType type) {
     struct PipeBind binding = {pipe, type};
     debug_printf("binding %p(%d %d) pipe for cmd %p with bind %d\n", pipe,
@@ -73,16 +66,12 @@ void bind_pipe(struct Command* cmd, struct Pipe* pipe, enum BindType type) {
     cmd->pipe = binding;
 }
 
-/**
- * @luabind Luall.api.Command:
- */
 void command_reserve_size(struct Command* cmd, size_t argc) {
     vector_reserve(cmd->args, argc);
 }
 
 /**
  * takes an string and and clones it
- * @luabind Luall.api.Command:add_arg
  */
 void add_arg(struct Command* cmd, const char* arg) {
     debug_printf("add_arg: %p %s\n", arg, arg);
@@ -92,7 +81,6 @@ void add_arg(struct Command* cmd, const char* arg) {
 
 /**
  * takes an string and and clones it
- * @luabind Luall.api.Command:stdout_bind
  */
 bool stdout_bind(struct Command* cmd) {
     return false;
@@ -103,7 +91,6 @@ bool stdout_bind(struct Command* cmd) {
  *
  * It frees all the command info at exit
  * returns the pid of the child, it does not wait for it to stop
- * @luabind Luall.api.Command:run
  */
 pid_t run(struct Command* p) {
     // all commands must end with a trailing NULL

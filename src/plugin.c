@@ -1,10 +1,18 @@
-#include <debug.h>
 #include <dirent.h>
+#include <dlfcn.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include <stdio.h>
+
+#include <debug.h>
 #include <ly_string.h>
 #include <path.h>
 #include <state.h>
-#include <stdio.h>
-#include "utils.h"
+#include <utils.h>
+#include "bindgen.h"
 
 void get_units(struct VectorPath* v, struct Path curr_dir) {
     debug_printf("reading units:...\n");
@@ -38,24 +46,80 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
     struct PluginHandler handler = {};
     handler.plugin               = p;
     char* path_str               = plugin_get_path(handler.plugin);
-    char* plugin_name =
-        plugin_get_kind debug_printf("loading c plugin @ %s\n", path_str);
+    char* name_str               = plugin_get_name(handler.plugin);
 
-    struct Path path = parse_path(path_str);
+    debug_printf("loading c plugin %s @ %s\n", name_str, path_str);
+
+    struct Path path         = parse_path(path_str);
+    struct Path include_path = clone_path(&path);
+    push_name(&include_path, "include");
     free(path_str);
 
     struct VectorPath compilation_units = {0, 0, 0};
     get_units(&compilation_units, path);
 
-    debug_printf("compilation_units (%lu) @ %p:\n", compilation_units.len,
+    debug_printf("compilation_units (%lu) @ %p\n", compilation_units.len,
         compilation_units.data);
+
+    struct VectorString args = {};
+    debug_printf("creating argv...\n");
+    debug_printf("pushing compiler name\n");
+    vector_push(args, string_from_cstr("/bin/gcc"));
+
+    debug_printf("pushing compiling flags\n");
+    for (size_t i = 0; i < sizeof flags / sizeof flags[0]; ++i) {
+        vector_push(args, string_from_cstr(flags[i]));
+    }
+    char* include_path_str = get_path_string(include_path);
+    vector_push(args, string_from_cstr("-I"));
+    vector_push(args, string_from_cstr(include_path_str));
+
+    debug_printf("pushing units\n");
     for (size_t i = 0; i < compilation_units.len; ++i) {
         char* path_str = get_path_string(compilation_units.data[i]);
-        debug_printf("\t%s\n", path_str);
+        debug_printf("\tpushing unit: %s @ %p\n", path_str, path_str);
+        vector_push(args, string_from_cstr(path_str));
+        debug_printf("\tcleaning temp var...\n");
+
         free(path_str);
     }
 
+    debug_printf("generating cache location\n");
+    struct Path cache_path = clone_path(&state.config.cache);
+    push_name(&cache_path, name_str);
+    char* plugin_cache_path = get_path_string(cache_path);
+
+    debug_printf("generating compiler output path\n");
+    vector_push(args, string_from_cstr("-o"));
+    vector_push(args, string_from_cstr(plugin_cache_path));
+
+    debug_printf("generating argv\n");
+    char** argv = malloc(sizeof(char*) * (args.len + 1));
+
+    debug_printf("copying from String to cstr\n");
+    for (size_t i = 0; i < args.len; ++i) {
+        argv[i] = string_to_cstring(args.data[i]);
+        debug_printf("added: %s\n", argv[i]);
+    }
+    argv[args.len] = NULL;
+    pid_t pid      = fork();
+    if (pid == 0) {
+        execv("/bin/gcc", argv);
+        printf("execv failed to run");
+        exit(-1);
+    }
+    else if (pid > 0) {
+        debug_printf("pid %lu\n", pid);
+        int return_code = 0;
+        waitpid(pid, &return_code, 0);
+        debug_printf(
+            "compilation_status %s\n", return_code == 0 ? "ok" : "err");
+    }
+
     destruct_path(&path);
+    handler.c.handler  = dlopen(argv[args.len - 1], RTLD_LAZY);
+    handler.c.setup    = dlsym(handler.c.handler, "plugin_setup");
+    handler.c.destruct = dlsym(handler.c.handler, "plugin_destruct");
 
     return handler;
 }

@@ -17,4 +17,6 @@ bool string_cmp(const struct String a, const struct String b);
 
 struct String substring(struct String v, const size_t beg, const size_t end);
 
+DefineVector(VectorString, struct String);
+
 #endif

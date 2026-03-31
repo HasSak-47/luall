@@ -38,6 +38,8 @@ struct PluginHandler {
     };
 };
 
+DefineVector(VectorPluginHandler, struct PluginHandler);
+
 // Luall.vars
 struct User {
     char* name;
@@ -54,13 +56,14 @@ struct Vars {
 
 struct Config {
     struct Path config;
+    struct Path cache;
     struct Path plugins;
 };
 
 struct ShellState {
     struct Vars vars;
     struct Config config;
-    struct PluginHandler plugins;
+    struct VectorPluginHandler plugins;
     bool running;
     bool reload;
     lua_State* L;
