@@ -111,14 +111,22 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
     }
     else if (pid > 0) {
         debug_printf("pid %lu\n", pid);
-        int return_code = 0;
-        waitpid(pid, &return_code, 0);
-        debug_printf(
-            "compilation_status %s\n", return_code == 0 ? "ok" : "err");
+        int status = 0;
+        waitpid(pid, &status, 0);
+        bool compiled = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+        debug_printf("compilation_status %s\n", compiled ? "ok" : "err");
+        if (!compiled) {
+            printf("plugin compilation failed, refusing to run\n");
+            return handler;
+        }
     }
 
     destruct_path(&path);
     handler.c.handler  = dlopen(argv[args.len - 1], RTLD_LAZY);
+    if (!handler.c.handler) {
+        printf("failed to load plugin shared object: %s\n", dlerror());
+        return handler;
+    }
     handler.c.setup    = dlsym(handler.c.handler, "plugin_setup");
     handler.c.destruct = dlsym(handler.c.handler, "plugin_destruct");
 

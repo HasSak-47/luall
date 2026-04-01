@@ -102,6 +102,24 @@ static int lua_command_run(lua_State* L) {
     return 1;
 }
 
+static int lua_command_wait(lua_State* L) {
+    struct Command* cmd = (struct Command*)check_command(L, 1);
+    if (cmd->running_pid == 0) {
+        luaL_error(L, "command not running");
+        return 1;
+    }
+    int status = wait_process(cmd->running_pid);
+    lua_pushinteger(L, (lua_Integer)status);
+    return 1;
+}
+
+static int lua_process_wait(lua_State* L) {
+    pid_t pid  = (pid_t)luaL_checkinteger(L, 1);
+    int status = wait_process(pid);
+    lua_pushinteger(L, (lua_Integer)status);
+    return 1;
+}
+
 static int lua_command_set_foreground(lua_State* L) {
     struct Command* cmd = check_command(L, 1);
     cmd->foreground     = lua_toboolean(L, 2);
@@ -137,6 +155,7 @@ static const luaL_Reg command_methods[] = {
     {       "add_arg",        lua_command_add_arg},
     {     "bind_pipe",      lua_command_bind_pipe},
     {           "run",            lua_command_run},
+    {          "wait",           lua_command_wait},
     {"set_foreground", lua_command_set_foreground},
     {"get_foreground", lua_command_get_foreground},
     {            NULL,                       NULL}
@@ -181,6 +200,9 @@ static void push_process_module(lua_State* L) {
 
     lua_pushcfunction(L, lua_pipe_new);
     lua_setfield(L, -2, "pipe");
+
+    lua_pushcfunction(L, lua_process_wait);
+    lua_setfield(L, -2, "wait");
 
     lua_pushinteger(L, NoneBind);
     lua_setfield(L, -2, "NONE");

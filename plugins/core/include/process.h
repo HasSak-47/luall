@@ -28,6 +28,7 @@ struct Command {
     char* cmd;
     struct VectorArgs args;
     bool foreground;
+    pid_t running_pid;
 
     struct PipeBind pipe;
 };
@@ -41,6 +42,7 @@ void bind_pipe(struct Command* cmd, struct Pipe* pipe, enum BindType ty);
 void add_arg(struct Command* cmd, const char* arg);
 
 pid_t run(struct Command* p);
+int wait_process(pid_t pid);
 
 void process_setup_lua_api(lua_State* state);
 

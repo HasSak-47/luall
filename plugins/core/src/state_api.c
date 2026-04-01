@@ -1,10 +1,16 @@
-#include <state_api.h>
 
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
+
+#include <debug.h>
 #include <state.h>
+#include <state_api.h>
+#include <term.h>
+
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 #define LUA_STATE_MT "rewsh.state"
 
@@ -40,6 +46,16 @@ int lua_unset_raw_mode(lua_State* _) {
     return 0;
 }
 
+int lua_enter_alternate_screen(lua_State* _) {
+    enter_alternate_screen();
+    return 0;
+}
+
+int lua_leave_alternate_screen(lua_State* _) {
+    leave_alternate_screen();
+    return 0;
+}
+
 void create_state_metatable(lua_State* L) {
     if (luaL_newmetatable(L, LUA_STATE_MT)) {
         lua_pushcfunction(L, index_state);
@@ -67,6 +83,12 @@ void state_setup_lua_api(lua_State* L) {
 
     lua_pushcfunction(L, lua_unset_raw_mode);
     lua_setfield(L, -2, "unset_raw_mode");
+
+    lua_pushcfunction(L, lua_enter_alternate_screen);
+    lua_setfield(L, -2, "enter_alternate_screen");
+
+    lua_pushcfunction(L, lua_leave_alternate_screen);
+    lua_setfield(L, -2, "leave_alternate_screen");
     lua_pop(L, 1);
 
     // setup state table

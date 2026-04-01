@@ -63,6 +63,11 @@ int plugin_load(lua_State* L) {
     switch (kind) {
     case PLUGIN_KIND_C: {
         struct PluginHandler handler = load_c_plugin(L, p);
+        if (!handler.c.handler || !handler.c.setup || !handler.c.destruct) {
+            return luaL_error(L,
+                "failed to load c plugin '%s' (compilation/linking error)",
+                path);
+        }
         debug_printf("loading c plugin into the internal state\n", path);
         vector_push(state.plugins, handler);
         struct PluginHandler* ptr = &state.plugins.data[state.plugins.len - 1];

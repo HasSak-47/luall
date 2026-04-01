@@ -7,5 +7,10 @@ cat_path:push('cat')
 local cat = rewsh.api.process.command(cat_path:to_string());
 cat:add_arg('README.md')
 
-local return_value = cat:run()
+rewsh.api.enter_alternate_screen()
+cat:run()
+cat:wait()
+
+rewsh.api.leave_alternate_screen()
+
 rewsh.state.running = false

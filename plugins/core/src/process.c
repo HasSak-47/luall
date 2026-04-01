@@ -18,6 +18,8 @@
 #include <lauxlib.h>
 #include <lua.h>
 
+#include <term.h>
+
 /**
  * cmd | cmd
  * cmd > &fd/file
@@ -165,7 +167,20 @@ pid_t run(struct Command* p) {
     free(p->args.data);
     free(p->cmd);
     debug_printf("[parent]: returning pid\n");
-    p->cmd       = NULL;
-    p->args.data = NULL;
+    p->cmd         = NULL;
+    p->args.data   = NULL;
+    p->running_pid = pid;
     return pid;
+}
+
+int wait_process(pid_t pid) {
+    int status = 0;
+    if (waitpid(pid, &status, 0) == -1) {
+        temporal_suicide_msg("[parent]: waitpid failed");
+    }
+
+    set_to_foreground();
+    set_raw_mode();
+
+    return status;
 }
