@@ -42,6 +42,7 @@ void get_units(struct VectorPath* v, struct Path curr_dir) {
 const char* flags[] = {
     "-Iinclude/", "-Wall", "-I/usr/include/lua5.4", "-g", "-fpic", "-shared"};
 
+// WARNING: THIS IS FULL OF MEMORY LEAKS FIX IN THE FUTURE!!
 struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
     struct PluginHandler handler = {};
     handler.plugin               = p;

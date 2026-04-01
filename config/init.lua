@@ -1,8 +1,11 @@
-core = rewsh.plugin.load("app://core")
+local core = rewsh.plugin.load("app://core")
 core:setup()
 
-cat = rewsh.api.process.command('/bin/cat');
+local cat_path = rewsh.api.path.parse('/bin')
+cat_path:push('cat')
+
+local cat = rewsh.api.process.command(cat_path:to_string());
 cat:add_arg('README.md')
 
-return_code = cat:run();
+local return_code = cat:run();
 print(return_code)

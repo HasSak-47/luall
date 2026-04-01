@@ -111,7 +111,7 @@ void init_plugin_table() {
  */
 void init_shell_state() {
     state.L = luaL_newstate();
-    luaL_openlibs(state.L);
+    // luaL_openlibs(state.L);
     lua_newtable(state.L);
     init_plugin_table();
     lua_setfield(state.L, -2, "plugin");

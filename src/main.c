@@ -1,6 +1,5 @@
 #include <bindgen.h>
 #include <debug.h>
-#include <hot.h>
 #include <path.h>
 #include <state.h>
 #include <utils.h>
@@ -61,33 +60,5 @@ int main(const int argc, const char* argv[]) {
     }
 
     init_shell_state();
-
-    // set_raw_mode();
-    // // interaction loop
-    // // this is so fucking ass
-    // debug_printf("running: %i\n", state.running);
-    // if (script != NULL) {
-    //     luaL_dofile(state.L, script);
-    // }
-    // else {
-    //     while (state.running) {
-    //         state.vars.error = 0;
-    //         debug_printf("handling input\n");
-    //         handle_input(state.L);
-    //         if (state.reload) {
-    //             printf("reloading...\n");
-    //             unload();
-    //             load();
-    //             state.reload = false;
-    //         }
-    //         debug_printf("reloading state\n");
-    //         get_current_state();
-    //     }
-    // }
-    // if (state.vars.debug)
-    //     printf("graceful exit...\n");
-    // free_args(args);
-    // unload();
-    // end_shell_state();
     return 0;
 }
