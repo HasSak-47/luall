@@ -2,6 +2,7 @@
 #include <debug.h>
 #include <path.h>
 #include <state.h>
+#include <stdio.h>
 #include <utils.h>
 
 #include <lauxlib.h>
@@ -60,5 +61,8 @@ int main(const int argc, const char* argv[]) {
     }
 
     init_shell_state();
+    while (state.running) {
+        run_hooks();
+    }
     return 0;
 }

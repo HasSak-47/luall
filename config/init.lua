@@ -7,5 +7,5 @@ cat_path:push('cat')
 local cat = rewsh.api.process.command(cat_path:to_string());
 cat:add_arg('README.md')
 
-local return_code = cat:run();
-print(return_code)
+local return_value = cat:run()
+rewsh.state.running = false

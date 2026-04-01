@@ -15,8 +15,6 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "lualib.h"
-#include "plugin/definitions.h"
 
 struct ShellState state = {};
 
@@ -90,6 +88,8 @@ int empty_plugin_setup(lua_State* L) {
     return 0;
 }
 
+void run_hooks() {}
+
 void init_plugin_table() {
     lua_newtable(state.L);
 
@@ -129,6 +129,7 @@ void init_shell_state() {
         const char* err = lua_tostring(state.L, -1); // error message on stack
         printf("Lua error: %s\n", err);
         lua_pop(state.L, 1); // remove error message
+        exit(-1);
     }
     free(path);
 }
