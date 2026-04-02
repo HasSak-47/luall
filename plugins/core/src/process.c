@@ -49,7 +49,7 @@ struct Command new_command(const char* cmd) {
     struct Command c = {
         .cmd        = strdup(cmd),
         .args       = {0, 0, 0},
-        .foreground = false,
+        .foreground = true,
 
         .pipe = {NULL, NoneBind},
     };
@@ -82,7 +82,7 @@ void add_arg(struct Command* cmd, const char* arg) {
 }
 
 /**
- * takes an string and and clones it
+ * no idea what this does
  */
 bool stdout_bind(struct Command* cmd) {
     return false;
