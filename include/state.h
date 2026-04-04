@@ -43,14 +43,14 @@ DefineVector(VectorPluginHandler, struct PluginHandler);
 
 // Luall.vars
 struct User {
-    char* name;
+    struct String name;
     struct Path home;
 };
 
 struct Vars {
     struct User user;
     struct Path cwd;
-    char* host;
+    struct String host;
     int error;
     bool debug;
 };

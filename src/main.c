@@ -3,6 +3,7 @@
 #include <input_key.h>
 #include <path.h>
 #include <state.h>
+#include <stdio.h>
 #include <utils.h>
 
 #include <lauxlib.h>
@@ -112,23 +113,23 @@ static bool read_escape_sequence(struct InputKey* key) {
             return true;
         }
 
-        char final = sequence[len - 1];
-        int params[3] = {0};
-        size_t param_count = 0;
-        int current = 0;
+        char final          = sequence[len - 1];
+        int params[3]       = {0};
+        size_t param_count  = 0;
+        int current         = 0;
         bool reading_number = false;
 
         for (size_t i = 0; i + 1 < len && param_count < 3; ++i) {
             char ch = sequence[i];
             if (ch >= '0' && ch <= '9') {
-                current = current * 10 + (ch - '0');
+                current        = current * 10 + (ch - '0');
                 reading_number = true;
                 continue;
             }
             if (ch == ';') {
                 if (reading_number)
                     params[param_count++] = current;
-                current = 0;
+                current        = 0;
                 reading_number = false;
             }
         }
@@ -210,6 +211,7 @@ static bool read_input_key(struct InputKey* key) {
     if (read(STDIN_FILENO, &byte, 1) != 1)
         return false;
 
+    debug_printf("skipped\n");
     if (byte == 0x1b)
         return read_escape_sequence(key);
 
@@ -227,6 +229,7 @@ int main(const int argc, const char* argv[]) {
     struct Args* args  = NULL;
     const char* script = NULL;
 
+    debug_printf("parsing args...\n");
     args = parse_args(argc, argv);
 
     if (is_debug(args)) {
@@ -238,6 +241,7 @@ int main(const int argc, const char* argv[]) {
         debug_printf("running scripting %s\n", script);
     }
 
+    debug_printf("starting shell state\n");
     init_shell_state();
 
     debug_printf("started event loop\n");

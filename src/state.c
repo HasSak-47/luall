@@ -15,6 +15,7 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "ly_string.h"
 #include "plugin/definitions.h"
 
 #define LUA_INPUT_KEY_MT "rewsh.input_key"
@@ -164,24 +165,18 @@ static int tostring_input_key(lua_State* L) {
 
     switch (key->kind) {
     case INPUT_KEY_KIND_LETTER:
-        lua_pushfstring(L,
-            "InputKey{kind=%s, letter=%c, modifiers=%d}",
-            input_key_kind_name(key->kind),
-            key->value.letter,
-            key->modifiers);
+        lua_pushfstring(L, "InputKey{kind=%s, letter=%c, modifiers=%d}",
+            input_key_kind_name(key->kind), key->value.letter, key->modifiers);
         break;
     case INPUT_KEY_KIND_MODIFIER:
-        lua_pushfstring(L,
-            "InputKey{kind=%s, modifier=%s}",
+        lua_pushfstring(L, "InputKey{kind=%s, modifier=%s}",
             input_key_kind_name(key->kind),
             input_modifier_name(key->value.modifier));
         break;
     case INPUT_KEY_KIND_SPECIAL:
-        lua_pushfstring(L,
-            "InputKey{kind=%s, special=%s, modifiers=%d}",
+        lua_pushfstring(L, "InputKey{kind=%s, special=%s, modifiers=%d}",
             input_key_kind_name(key->kind),
-            input_special_name(key->value.special),
-            key->modifiers);
+            input_special_name(key->value.special), key->modifiers);
         break;
     case INPUT_KEY_KIND_NONE:
     default:
@@ -214,13 +209,15 @@ static void push_input_key(lua_State* L, struct InputKey key) {
  */
 void init_shell_variables() {
     state.running   = true;
-    state.vars.host = malloc(256);
-    gethostname(state.vars.host, 256);
+    char* host_temp = malloc(256);
+    gethostname(host_temp, 256);
+    state.vars.host = string_from_cstr(host_temp);
+    free(host_temp);
 
     uid_t uid = getuid();
     // no getpwuid_r cuz it is ez and I (hopefully) just need a single thread
     struct passwd* p     = getpwuid(uid);
-    state.vars.user.name = strdup(p->pw_name);
+    state.vars.user.name = string_from_cstr(p->pw_name);
     state.vars.user.home = parse_path(p->pw_dir);
 
     const char* _cwd = getenv("PWD");
@@ -390,9 +387,9 @@ void get_current_state() {}
  * cleanins the shell state
  */
 void end_shell_state() {
-    free(state.vars.host);
+    free(state.vars.host.data);
 
-    free(state.vars.user.name);
+    free(state.vars.user.name.data);
 
     destruct_path(&state.vars.cwd);
     destruct_path(&state.vars.user.home);

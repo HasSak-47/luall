@@ -100,10 +100,6 @@ void state_setup_lua_api(lua_State* L) {
     return;
 }
 
-//
-// typedef typeof(plugin_setup)* SetupFunction;
-// typedef typeof(plugin_destruct)* DestructFunction;
-//
 // struct PluginHandler {
 //     struct Plugin* plugin;
 //     union {
