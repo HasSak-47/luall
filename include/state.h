@@ -18,6 +18,7 @@
 #include <stdbool.h>
 
 #include "bindgen.h"
+#include "input_key.h"
 #include "path.h"
 #include "plugin/definitions.h"
 
@@ -92,6 +93,6 @@ void update_current_state();
 
 void trigger_enter_hook();
 void trigger_exit_hook();
-void trigger_input_hook(int key);
+void trigger_input_hook(struct InputKey key);
 
 #endif
