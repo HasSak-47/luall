@@ -6,6 +6,7 @@
 #include <path_api.h>
 #include <process.h>
 #include <state_api.h>
+#include "event_api.h"
 
 int plugin_setup(lua_State* L) {
     luaL_requiref(L, "base", luaopen_base, true);
@@ -17,6 +18,7 @@ int plugin_setup(lua_State* L) {
     process_setup_lua_api(L);
     path_setup_lua_api(L);
     state_setup_lua_api(L);
+    event_setup_lua_api(L);
 
     return 0;
 }

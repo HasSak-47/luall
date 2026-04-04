@@ -34,14 +34,24 @@ int main(const int argc, const char* argv[]) {
     }
 
     init_shell_state();
+
+    debug_printf("started event loop\n");
+    trigger_enter_hook();
     while (state.running) {
-        run_hooks();
+        int key = 0;
+        int len = read(STDIN_FILENO, &key, 1);
+
+        if (len == 1) {
+            debug_printf("input: %d\n", key);
+            trigger_input_hook(key);
+        }
         if (state.reload) {
             end_shell_state();
             init_shell_state();
             state.reload = false;
         }
     }
+    trigger_exit_hook();
     end_shell_state();
     return 0;
 }

@@ -18,6 +18,7 @@ void unset_raw_mode() {
 }
 
 void set_raw_mode() {
+    debug_printf("entering raw mode...");
     if (!got_original) {
         tcgetattr(STDIN_FILENO, &orig_termios);
         atexit(unset_raw_mode);

@@ -60,10 +60,23 @@ struct Config {
     struct Path plugins;
 };
 
+struct Hook {
+    enum PluginKind kind;
+    enum Event event;
+
+    union {
+        Actor actor;
+        int reference;
+    };
+};
+
+DefineVector(VectorHook, struct Hook);
+
 struct ShellState {
     struct Vars vars;
     struct Config config;
     struct VectorPluginHandler plugins;
+    struct VectorHook hooks;
     bool running;
     bool reload;
     lua_State* L;
@@ -77,6 +90,8 @@ void end_shell_state();
 void get_current_state();
 void update_current_state();
 
-void run_hooks();
+void trigger_enter_hook();
+void trigger_exit_hook();
+void trigger_input_hook(int key);
 
 #endif

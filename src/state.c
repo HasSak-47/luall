@@ -15,6 +15,7 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "plugin/definitions.h"
 
 struct ShellState state = {};
 
@@ -93,7 +94,57 @@ int empty_plugin_setup(lua_State* L) {
     return 0;
 }
 
-void run_hooks() {}
+static void run_event_enter_hook(struct Hook* hook) {
+    if (hook->kind == PLUGIN_KIND_C) {
+        hook->actor(state.L);
+    }
+}
+
+static void run_event_exit_hook(struct Hook* hook) {
+    if (hook->kind == PLUGIN_KIND_C) {
+        hook->actor(state.L);
+    }
+}
+
+static void run_event_key_input_hook(int key, struct Hook* hook) {
+    lua_pushinteger(state.L, key);
+    if (hook->kind == PLUGIN_KIND_C) {
+        hook->actor(state.L);
+    }
+    else {
+        lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
+        lua_pushinteger(state.L, key);
+        lua_pcall(state.L, 1, 1, 0);
+    }
+}
+
+void trigger_enter_hook() {
+    debug_printf("running enter hooks\n");
+    for (size_t i = 0; i < state.hooks.len; ++i) {
+        if (state.hooks.data[i].event == EVENT_KEY_INPUT) {
+            run_event_enter_hook(&state.hooks.data[i]);
+        }
+    }
+}
+
+void trigger_exit_hook() {
+    debug_printf("running exit hook...\n");
+    for (size_t i = 0; i < state.hooks.len; ++i) {
+        if (state.hooks.data[i].event == EVENT_KEY_INPUT) {
+            run_event_exit_hook(&state.hooks.data[i]);
+            ;
+        }
+    }
+}
+
+void trigger_input_hook(int key) {
+    for (size_t i = 0; i < state.hooks.len; ++i) {
+        if (state.hooks.data[i].event == EVENT_KEY_INPUT) {
+            run_event_key_input_hook(key, &state.hooks.data[i]);
+            ;
+        }
+    }
+}
 
 void init_plugin_table() {
     lua_newtable(state.L);
@@ -158,4 +209,14 @@ void end_shell_state() {
     destruct_path(&state.config.config);
 
     lua_close(state.L);
+}
+
+void add_hook(enum Event event, Actor actor) {
+    struct Hook hook = {
+        .kind  = PLUGIN_KIND_C,
+        .event = event,
+        .actor = actor,
+    };
+
+    vector_push(state.hooks, hook);
 }

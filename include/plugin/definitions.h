@@ -8,10 +8,9 @@ extern "C" {
 #endif
 
 enum Event {
-    ON_INPUT_START,
-    ON_INPUT_ADD,
-    ON_INPUT_END,
-    ON_VARIABLE_RELOAD,
+    EVENT_KEY_INPUT,
+    EVENT_ENTER,
+    EVENT_EXIT,
 };
 
 int plugin_setup(lua_State* L);
