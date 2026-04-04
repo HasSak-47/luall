@@ -82,13 +82,6 @@ void add_arg(struct Command* cmd, const char* arg) {
 }
 
 /**
- * no idea what this does
- */
-bool stdout_bind(struct Command* cmd) {
-    return false;
-};
-
-/**
  * Runs a given command
  *
  * It frees all the command info at exit

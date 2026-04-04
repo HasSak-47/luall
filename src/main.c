@@ -211,7 +211,6 @@ static bool read_input_key(struct InputKey* key) {
     if (read(STDIN_FILENO, &byte, 1) != 1)
         return false;
 
-    debug_printf("skipped\n");
     if (byte == 0x1b)
         return read_escape_sequence(key);
 

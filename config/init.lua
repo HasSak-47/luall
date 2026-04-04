@@ -1,19 +1,22 @@
 local core = rewsh.plugin.load("app://core")
 core:setup()
 
-rewsh.api.set_raw_mode()
+local cat = rewsh.api.process.command('/bin/cat')
+cat:add_arg('README.md')
+local grep = rewsh.api.process.command('/bin/grep')
+grep:add_arg('git')
 
-rewsh.api.on_event('enter', rewsh.api.set_raw_mode)
-rewsh.api.on_event('exit', rewsh.api.unset_raw_mode)
+local pipe = rewsh.api.process.pipe()
 
-local function prompt()
-end
+cat:bind_pipe(pipe, "write")
+grep:bind_pipe(pipe, "read")
 
-rewsh.api.on_event('enter', prompt)
+cat:run()
+grep:run()
 
-rewsh.api.on_event('key_input', function(key)
-    print('key:', tostring(key))
-    if key.kind == 'letter' and key.letter == 'q' then
-        rewsh.state.running = false
-    end
-end)
+pipe:close()
+
+cat:wait()
+grep:wait()
+
+rewsh.state.running = false
