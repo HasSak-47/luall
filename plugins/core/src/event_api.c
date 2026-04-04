@@ -1,6 +1,7 @@
 #include <event_api.h>
 #include <string.h>
 #include "bindgen.h"
+#include "debug.h"
 #include "lauxlib.h"
 #include "lua.h"
 #include "state.h"
@@ -21,6 +22,7 @@ int add_lua_event(lua_State* L) {
     luaL_checktype(L, 2, LUA_TFUNCTION);
     int reference = luaL_ref(L, LUA_REGISTRYINDEX);
 
+    debug_printf("binding lua funcion to a hook\n");
     struct Hook hook = {
         .kind = PLUGIN_KIND_LUA, .event = event, .reference = reference};
     vector_push(state.hooks, hook);

@@ -12,9 +12,15 @@
 
 ---@class RewshPath
 ---@field push fun(self: RewshPath, name: string)
+---@field pop fun(self: RewshPath)
 ---@field to_string fun(self: RewshPath): string
+---@field path_is_dir fun(self: RewshPath): boolean
+---@field expand_path fun(self: RewshPath, cwd: RewshPath)
+---@field get_childs fun(self: RewshPath): RewshPath[]
+---@field get_name fun(self: RewshPath): string
 
 ---@class RewshPathApi
+---@field new fun(): RewshPath
 ---@field parse fun(path: string): RewshPath
 
 ---@class RewshCommand
@@ -38,9 +44,27 @@
 ---@field WRITE integer
 ---@field ERROR integer
 
+---@alias RewshInputKeyKind "none"|"letter"|"modifier"|"special"
+---@alias RewshInputModifier "shift"|"alt"|"ctrl"
+---@alias RewshInputSpecialKey "up" | "down" | "right" | "left" | "enter" | "tab" | "backspace" | "escape" | "delete" | "insert" | "home" | "end" | "page_up" | "page_down" | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
+
+---@class RewshInputKey
+---@field kind RewshInputKeyKind
+---@field letter string|nil
+---@field modifier RewshInputModifier|nil
+---@field special RewshInputSpecialKey|nil
+---@field modifiers integer
+---@field shift boolean
+---@field alt boolean
+---@field ctrl boolean
+
+---@alias RewshEventName "key_input"|"enter"|"exit"
+---@alias RewshOnEvent fun(event: "enter"|"exit", cb: fun()) | fun(event: "key_input", cb: fun(input: RewshInputKey))
+
 ---@class RewshApi
 ---@field process RewshProcessApi
 ---@field path RewshPathApi
+---@field on_event RewshOnEvent
 ---@field set_raw_mode fun()
 ---@field unset_raw_mode fun()
 ---@field enter_alternate_screen fun()

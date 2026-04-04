@@ -245,10 +245,11 @@ int main(const int argc, const char* argv[]) {
 
     debug_printf("started event loop\n");
     trigger_enter_hook();
-    while (state.running) {
-        struct InputKey key = input_key_none();
+    struct InputKey key = input_key_none();
 
+    while (state.running) {
         if (read_input_key(&key)) {
+            debug_printf("running key event");
             trigger_input_hook(key);
         }
         if (state.reload) {

@@ -282,25 +282,36 @@ int empty_plugin_setup(lua_State* L) {
 }
 
 static void run_event_enter_hook(struct Hook* hook) {
-    if (hook->kind == PLUGIN_KIND_C) {
-        hook->actor(state.L);
-    }
-}
-
-static void run_event_exit_hook(struct Hook* hook) {
-    if (hook->kind == PLUGIN_KIND_C) {
-        hook->actor(state.L);
-    }
-}
-
-static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
-    push_input_key(state.L, key);
+    debug_printf("running enter event\n");
     if (hook->kind == PLUGIN_KIND_C) {
         hook->actor(state.L);
     }
     else {
         lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
-        lua_insert(state.L, -2);
+        lua_pcall(state.L, 0, 0, 0);
+    }
+}
+
+static void run_event_exit_hook(struct Hook* hook) {
+    debug_printf("running exit event\n");
+    if (hook->kind == PLUGIN_KIND_C) {
+        hook->actor(state.L);
+    }
+    else {
+        lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
+        lua_pcall(state.L, 0, 0, 0);
+    }
+}
+
+static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
+    debug_printf("running input event\n");
+    if (hook->kind == PLUGIN_KIND_C) {
+        push_input_key(state.L, key);
+        hook->actor(state.L);
+    }
+    else {
+        lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
+        push_input_key(state.L, key);
         lua_pcall(state.L, 1, 0, 0);
     }
 }
@@ -308,7 +319,7 @@ static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
 void trigger_enter_hook() {
     debug_printf("running enter hooks\n");
     for (size_t i = 0; i < state.hooks.len; ++i) {
-        if (state.hooks.data[i].event == EVENT_KEY_INPUT) {
+        if (state.hooks.data[i].event == EVENT_ENTER) {
             run_event_enter_hook(&state.hooks.data[i]);
         }
     }
@@ -317,7 +328,7 @@ void trigger_enter_hook() {
 void trigger_exit_hook() {
     debug_printf("running exit hook...\n");
     for (size_t i = 0; i < state.hooks.len; ++i) {
-        if (state.hooks.data[i].event == EVENT_KEY_INPUT) {
+        if (state.hooks.data[i].event == EVENT_EXIT) {
             run_event_exit_hook(&state.hooks.data[i]);
             ;
         }

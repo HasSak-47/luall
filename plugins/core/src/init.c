@@ -10,10 +10,12 @@
 
 int plugin_setup(lua_State* L) {
     luaL_requiref(L, "base", luaopen_base, true);
+    luaL_requiref(L, "io", luaopen_io, true);
     luaL_requiref(L, "math", luaopen_math, true);
     luaL_requiref(L, "table", luaopen_table, true);
     luaL_requiref(L, "package", luaopen_package, true);
     luaL_requiref(L, "string", luaopen_string, true);
+    luaL_requiref(L, "os", luaopen_os, true);
 
     process_setup_lua_api(L);
     path_setup_lua_api(L);
