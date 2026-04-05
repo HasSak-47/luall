@@ -220,8 +220,9 @@ void init_shell_variables() {
     state.vars.user.name = string_from_cstr(p->pw_name);
     state.vars.user.home = parse_path(p->pw_dir);
 
-    const char* _cwd = getenv("PWD");
-    state.vars.cwd   = parse_path(_cwd);
+    char buf[256] = {};
+    getcwd(buf, 256);
+    state.vars.cwd = parse_path(buf);
 }
 
 void init_shell_config() {
@@ -399,7 +400,6 @@ void get_current_state() {}
  */
 void end_shell_state() {
     free(state.vars.host.data);
-
     free(state.vars.user.name.data);
 
     destruct_path(&state.vars.cwd);
@@ -407,7 +407,21 @@ void end_shell_state() {
     destruct_path(&state.config.plugins);
     destruct_path(&state.config.config);
 
+    for (size_t i = 0; i < state.plugins.len; ++i) {
+        struct PluginHandler* handler = &state.plugins.data[i];
+        enum PluginKind kind          = plugin_get_kind(handler->plugin);
+        if (kind == PLUGIN_KIND_C) {
+            handler->c.destruct(state.L);
+            dlclose(handler->c.handler);
+        }
+    }
+    free(state.plugins.data);
+    state.plugins.data = NULL;
+    state.plugins.len  = 0;
+    state.plugins.cap  = 0;
+
     lua_close(state.L);
+    state = (struct ShellState){};
 }
 
 void add_hook(enum Event event, Actor actor) {

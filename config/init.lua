@@ -4,8 +4,21 @@ core:setup()
 rewsh.api.on_event('enter', rewsh.api.set_raw_mode)
 rewsh.api.on_event('exit', rewsh.api.unset_raw_mode)
 
+local home_string = rewsh.state.vars.user.home:to_string()
+print(home_string)
+
+local function _prompt()
+    local path_str = rewsh.state.vars.cwd:to_string()
+    path_str = path_str:gsub(home_string, '~')
+    return rewsh.state.vars.user.name .. '@' .. rewsh.state.vars.host .. ' ' .. path_str .. '$'
+end
+
 local function prompt()
-    return '$>'
+    local ok, p = pcall(_prompt)
+    if not ok then
+        return '$>'
+    end
+    return p
 end
 
 local input_state = {
@@ -59,6 +72,18 @@ local function handle_input(input)
             -- write command one las ttime
             local o = '\r' .. prompt() .. input_state.data .. '\n'
             io.stdout:write(o)
+            if input_state.data == 'reload' then
+                rewsh.state.reload = true
+                input_state.data = ''
+                input_state.index = 0
+                return
+            end
+            if input_state.data == 'exit' then
+                rewsh.state.running = false
+                input_state.data = ''
+                input_state.index = 0
+                return
+            end
 
             local ok, _ = pcall(parser.parser, input_state.data)
             if not ok then

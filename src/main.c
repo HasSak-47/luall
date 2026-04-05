@@ -253,7 +253,10 @@ int main(const int argc, const char* argv[]) {
             trigger_input_hook(key);
         }
         if (state.reload) {
+            debug_printf("reloading...");
+            debug_printf("ending current state...");
             end_shell_state();
+            debug_printf("initing current state...");
             init_shell_state();
             state.reload = false;
         }

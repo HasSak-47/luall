@@ -1,11 +1,11 @@
 #include <path.h>
 #include <path_api.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include "debug.h"
 #include "lauxlib.h"
 #include "lua.h"
 #include "ly_string.h"
-
-#define LUA_PATH_MT "rewsh.api.path"
 
 static struct Path* check_path(lua_State* L, int idx) {
     return (struct Path*)luaL_checkudata(L, idx, LUA_PATH_MT);
@@ -92,7 +92,8 @@ static int lua_get_name(lua_State* L) {
 }
 
 static int lua_path_gc(lua_State* L) {
-    struct Path* path = (struct Path*)lua_newuserdata(L, sizeof(struct Path));
+    debug_printf("path deletion..\n");
+    struct Path* path = check_path(L, -1);
     destruct_path(path);
     return 0;
 }

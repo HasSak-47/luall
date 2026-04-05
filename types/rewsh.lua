@@ -5,10 +5,21 @@
 
 ---@class RewshPluginApi
 ---@field load fun(path: string): RewshCorePlugin
+---
+---@class RewshStateVarsUser
+---@field home RewshPath
+---@field name string
+---
+---@class RewshStateVars
+---@field env {string:string}
+---@field cwd RewshPath
+---@field host string
+---@field user RewshStateVarsUser
 
 ---@class RewshState
 ---@field running boolean
 ---@field reload boolean
+---@field vars RewshStateVars
 
 ---@class RewshPath
 ---@field push fun(self: RewshPath, name: string)
