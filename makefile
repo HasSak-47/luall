@@ -28,7 +28,7 @@ OUT := rewsh
 CC := gcc
 CFLAGS := -g -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
 
-LDFLAGS := -o $(OUT) -export-dynamic -llua
+LDFLAGS := -o $(OUT) -export-dynamic $(LUA_LIBS)
 
 build: $(OUT)
 

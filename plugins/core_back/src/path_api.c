@@ -121,6 +121,7 @@ void create_path_metatable(lua_State* L) {
         luaL_setfuncs(L, path_methods, 0);
         lua_setfield(L, -2, "__index");
     }
+    lua_pop(L, 1);
 }
 
 void create_path_module(lua_State* L) {

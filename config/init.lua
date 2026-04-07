@@ -26,22 +26,27 @@ local input_state = {
     index = 0,
 }
 
-rewsh.api.on_event('enter', function()
-    local o = '\r' .. prompt() .. input_state.data
-    io.stdout:write(o)
+local function render_input()
+    local line = '\r' .. prompt() .. input_state.data
+    io.stdout:write(line)
+    io.stdout:write('\x1b[K')
+
+    local step_back = input_state.data:len() - input_state.index
+    if step_back > 0 then
+        io.stdout:write(string.format('\x1b[%dD', step_back))
+    end
+
     io.stdout:flush()
+end
+
+rewsh.api.on_event('enter', function()
+    render_input()
 end)
 
 local parser = require('config.parser')
 
 ---@param input RewshInputKey
 local function handle_input(input)
-    -- clear the line
-    io.stdout:write('\r')
-    for _ = 1, ('\r' .. prompt() .. input_state.data):len(), 1 do
-        io.stdout:write(' ')
-    end
-
     -- handle input logic
     if input.kind == 'letter' then
         if input.letter == 'c' and input.ctrl then
@@ -95,15 +100,7 @@ local function handle_input(input)
         end
     end
 
-    -- rewrite the line
-    local o = '\r' .. prompt() .. input_state.data
-    io.stdout:write(o)
-    -- move the cursor to the current index
-    local step_back = (input_state.data:len() - input_state.index) + 1
-    io.stdout:write(string.format('\x1b[%dD', step_back))
-
-
-    io.stdout:flush()
+    render_input()
 end
 
 rewsh.api.on_event('key_input', handle_input)

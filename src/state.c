@@ -412,15 +412,21 @@ void end_shell_state() {
         enum PluginKind kind          = plugin_get_kind(handler->plugin);
         if (kind == PLUGIN_KIND_C) {
             handler->c.destruct(state.L);
+        }
+    }
+
+    lua_close(state.L);
+
+    for (size_t i = 0; i < state.plugins.len; ++i) {
+        struct PluginHandler* handler = &state.plugins.data[i];
+        enum PluginKind kind          = plugin_get_kind(handler->plugin);
+        if (kind == PLUGIN_KIND_C) {
             dlclose(handler->c.handler);
         }
     }
-    free(state.plugins.data);
-    state.plugins.data = NULL;
-    state.plugins.len  = 0;
-    state.plugins.cap  = 0;
 
-    lua_close(state.L);
+    free(state.plugins.data);
+    free(state.hooks.data);
     state = (struct ShellState){};
 }
 
