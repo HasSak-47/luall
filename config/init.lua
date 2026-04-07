@@ -1,4 +1,4 @@
-local core = rewsh.plugin.load("app://core")
+local core = rewsh.plugin.load("app://core_back")
 core:setup()
 
 rewsh.api.on_event('enter', rewsh.api.set_raw_mode)
