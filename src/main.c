@@ -254,10 +254,14 @@ int main(const int argc, const char* argv[]) {
         }
         if (state.reload) {
             debug_printf("reloading...");
+            debug_printf("running exit hooks before reload...");
+            trigger_exit_hook();
             debug_printf("ending current state...");
             end_shell_state();
             debug_printf("initing current state...");
             init_shell_state();
+            debug_printf("running enter hooks after reload...");
+            trigger_enter_hook();
             state.reload = false;
         }
     }

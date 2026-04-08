@@ -1,110 +1,126 @@
 # rewsh
 
-This is an interactive Linux shell implemented in C with embedded Lua support, designed to provide a flexible and extensible command-line interface.
-It uses Lua as its scripting language, and provides a minimal API to interact with the OS and the interaction loop, which also serves as a built in commands.
+`rewsh` is an interactive Linux shell written in C with an embedded Lua runtime.
+The shell core owns terminal I/O, process execution, path/state userdata, and plugin loading.
+Shell behavior such as prompt rendering, input handling, and command parsing now lives in plugins.
 
-The shell allows modifications to its behavior at runtime including prompts, command parsing, and more.
+## Current Shape
+
+- The shell loop and input decoding live in C.
+- CLI argument parsing and plugin manifest parsing live in Rust.
+- `core_back` is a C plugin that exposes the Lua API for:
+  - process execution
+  - path objects
+  - state access
+  - event hooks
+  - terminal mode helpers
+- `core_front` is a Lua plugin that owns:
+  - prompt rendering
+  - input buffer editing
+  - shell parsing
+  - aliases and Lua-side builtins
+  - session history
+
+The bootstrap config in [config/init.lua](./config/init.lua) simply loads `core_back` and `core_front`.
 
 ## Features
 
-- Built-in shell commands.
-- Lua integration for scripting and automation.
-- Environment variable management.
-- Configurable initialization scripts.
-- Configurable at runtime
+- Embedded Lua runtime for shell customization
+- Plugin manifests with app-local loading via `app://...`
+- Lua plugins and C plugins
+- `RewshPath` userdata exposed to Lua
+- Process execution and simple pipelines from the frontend parser
+- Runtime state exposed to Lua:
+  - `rewsh.state.vars.cwd`
+  - `rewsh.state.vars.user`
+  - `rewsh.state.vars.host`
+  - `rewsh.state.vars.env`
+  - `rewsh.state.vars.error`
+  - `rewsh.state.vars.debug`
+- Plugin-relative Lua module resolution for Lua plugins
 
-## Demonstrations
+## Project Layout
 
-![rewsh](https://github.com/user-attachments/assets/14467c20-61e2-4202-a509-b09e3e581fdb)
+- [src/main.c](./src/main.c): shell loop and key decoding
+- [src/state.c](./src/state.c): Lua state setup and plugin loading
+- [plugins/core_back](./plugins/core_back): backend Lua API plugin
+- [plugins/core_front](./plugins/core_front): frontend shell plugin
+- [types/rewsh.lua](./types/rewsh.lua): Lua type stubs for the exposed API
 
-## How to use
+## Building
 
-### dependencies
+### Dependencies
 
-To build and run this project, you will need:
+- Lua 5.4
+- gcc
+- make
+- Rust toolchain (`cargo`, `rustc`)
+- `cbindgen`
+- `pkg-config`
 
-- **Lua** 5.4
-- **gcc**
-- **make**
-- **Rust toolchain** (rustc + cargo)
-- **cbindgen**
-- **clang** (for Rust build dependencies)
+### Commands
 
-### building
+- Build: `make build`
+- Run: `make run`
+- Clean: `make clean`
+- Test build with `LY_TEST`: `make test`
 
-- Clone the project `git clone -b stable https://github.com/HasSak-47/rewsh.git`
-- to build all: `make all`
-- to run: `make run` or `./rewsh` after building
+The main binary is `./rewsh`.
 
-## Shortcomings
+## Plugin Model
 
-### UX
+Each plugin has a `rewsh.toml` manifest.
+
+- C plugins are compiled and loaded as shared objects.
+- Lua plugins are loaded from `init.lua`.
+- When a Lua plugin is loaded, rewsh prepends these plugin-local search paths so `require(...)` works inside the plugin:
+  - `<plugin>/lua/?.lua`
+  - `<plugin>/lua/?/init.lua`
+  - `<plugin>/?.so`
+
+That lets a Lua plugin use a layout like:
+
+```text
+plugins/core_front/
+  init.lua
+  lua/
+    parser.lua
+```
+
+## Runtime API
+
+The shell exposes a global `rewsh` table to Lua.
+
+- `rewsh.plugin.load("app://name")`: load a plugin by app path
+- `rewsh.api.process`: create commands and pipes
+- `rewsh.api.path`: parse and build `RewshPath` values
+- `rewsh.api.on_event(...)`: bind enter/exit/key_input hooks
+- `rewsh.api.cd(...)`: change cwd from Lua
+- `rewsh.state`: mutable runtime state
+- `rewsh.front`: frontend-owned Lua namespace installed by `core_front`
+
+The frontend parser currently lives under `rewsh.front.api`.
+
+## Current Limitations
 
 - No syntax highlighting
-- There is no tab completion
-- Ctrl+c doesn't skip to the next line
-- Basic prompt editing; no multiline or advanced line editing
-- History is minimal (no persistent history file)
+- No tab completion
+- No history navigation UI yet
+- No job control (`fg`, `bg`)
+- No glob expansion
+- Redirection tokens are parsed but not executed yet
+- Multiline command handling is still incomplete
+- Shell behavior assumes a real TTY; non-interactive runs are still rough
+- The Lua/C API is thin and unsafe; bad userdata or bad assumptions can crash the shell
 
-### Utils
+## Notes
 
-- No file globing \*
-- No job control (fg/bg)
-- Pipes exist at the Lua API level, but there is no shell syntax for pipelines/redirection yet
-- Limited built-ins and minimal error messages
-- No completion for env vars, paths, or commands
-- Testing is kinda shit (sparse and mostly manual)
+- `Ctrl+C` handling is still primitive and not yet shell-like.
+- Reload behavior exists through `rewsh.state.reload`, but this codebase is still in active transition and not hardened.
 
-## Technical Details
+## Foot Guns
 
-### Architecture
-
-- Core shell loop and terminal handling live in C (see `src/main.c`).
-- Lua runs as an embedded scripting runtime; the shell drives a single `lua_State` and exposes a `Luall` table for API + state.
-- CLI argument parsing is implemented in Rust and exported as a C ABI (`src/lib.rs`) and linked into the C binary.
-
-### Lua initialization and config
-
-- `init.lua` is the required blueprint loaded during `lua_setup`.
-- `config.lua` is the user configuration file (loaded from the configured `CONFIG_PATH`).
-- Runtime values like cwd/user/host/error/debug are pushed into `Luall.vars` each prompt cycle.
-
-### Hot-loaded modules
-
-- Files in `plugins/` are compiled into shared objects under `units/` and linked into `units/bundle.so`.
-- The shell `dlopen`s `bundle.so` and resolves `handle_input`, `lua_setup`, and `lua_cleanup`.
-- A reload rebuilds and re-loads the bundle when the `reload` flag is set.
-
-### Build pipeline
-
-- `make all` builds C objects, the Rust `cdylib` (`librewsh.so`), and generates `include/bindgen.h` via `cbindgen`.
-- The Rust library is copied into `build/` and linked into the final `rewsh` binary.
-
-### Foot guns
-
-rewsh is the bridge between the interaction loop and the configuration, and there are not many guards to guaranty it's integrity and structure and the user has full control over it changes to it may crash the whole shell :D
-
-More ways to shoot yourself in the foot:
-
-### Hot-loaded modules
-
-- Files in `plugins/` are compiled into shared objects under `units/` and linked into `units/bundle.so`.
-- The shell `dlopen`s `bundle.so` and resolves `handle_input`, `lua_setup`, and `lua_cleanup`.
-- A reload rebuilds and re-loads the bundle when the `reload` flag is set.
-
-### Build pipeline
-
-- `make all` builds C objects, the Rust `cdylib` (`librewsh.so`), and generates `include/bindgen.h` via `cbindgen`.
-- The Rust library is copied into `build/` and linked into the final `rewsh` binary.
-
-### Foot guns
-
-rewsh is the bridge between the interaction loop and the configuration, and there are not many guards to guaranty it's integrity and structure and the user has full control over it changes to it may crash the whole shell :D
-
-More ways to shoot yourself in the foot:
-
-- You can override core functions/tables in Lua at runtime and the C side will happily call into the void.
-- Hot reload recompiles and re-loads the bundle; stale state, missing symbols, or bad pointers = instant sadness.
-- `init.lua` is assumed to exist and be valid; syntax errors will stop the shell from starting.
-- Raw terminal mode is enabled; if the process crashes you might need to `reset` your terminal.
-- The API is thin and fast, not safe; invalid userdata/types can crash or corrupt state.
+- Lua can mutate shared global state directly.
+- Raw mode is enabled during interactive use; a crash may leave your terminal in a bad state.
+- Plugin code runs with very little protection.
+- Path/process/state userdata are fast, but not defensive.

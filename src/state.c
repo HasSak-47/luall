@@ -76,6 +76,57 @@ int lua_plugin_setup(lua_State* L) {
     return 0;
 }
 
+static int package_prepend_path(lua_State* L, const char* field, const char* entry) {
+    lua_getglobal(L, "package");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return luaL_error(L, "package table is not available");
+    }
+
+    lua_getfield(L, -1, field);
+    const char* current = lua_tostring(L, -1);
+    if (current && strstr(current, entry) != NULL) {
+        lua_pop(L, 2);
+        return 0;
+    }
+
+    lua_pushfstring(L, "%s;%s", entry, current ? current : "");
+    lua_setfield(L, -3, field);
+    lua_pop(L, 2);
+    return 0;
+}
+
+static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
+    size_t base_len = strlen(plugin_path);
+    const char* lua_suffix = "/lua/?.lua";
+    const char* lua_init_suffix = "/lua/?/init.lua";
+    const char* c_suffix = "/?.so";
+
+    char* lua_path = malloc(base_len + strlen(lua_suffix) + 1);
+    char* lua_init_path = malloc(base_len + strlen(lua_init_suffix) + 1);
+    char* c_path = malloc(base_len + strlen(c_suffix) + 1);
+
+    snprintf(lua_path, base_len + strlen(lua_suffix) + 1, "%s%s",
+        plugin_path, lua_suffix);
+    snprintf(lua_init_path, base_len + strlen(lua_init_suffix) + 1, "%s%s",
+        plugin_path, lua_init_suffix);
+    snprintf(c_path, base_len + strlen(c_suffix) + 1, "%s%s", plugin_path,
+        c_suffix);
+
+    int status = package_prepend_path(L, "path", lua_init_path);
+    if (status == 0) {
+        status = package_prepend_path(L, "path", lua_path);
+    }
+    if (status == 0) {
+        status = package_prepend_path(L, "cpath", c_path);
+    }
+
+    free(lua_path);
+    free(lua_init_path);
+    free(c_path);
+    return status;
+}
+
 int plugin_load(lua_State* L) {
     debug_printf("loading plugin...\n");
     const char* path     = lua_tostring(L, -1);
@@ -108,6 +159,10 @@ int plugin_load(lua_State* L) {
             .lua                        = {.setup_reference = LUA_NOREF,
                                            .destruct_reference = LUA_NOREF}};
         char* plugin_path_str = plugin_get_path(p);
+        if (register_plugin_module_paths(L, plugin_path_str) != 0) {
+            free(plugin_path_str);
+            return lua_error(L);
+        }
         const char* plugin_init = "init.lua";
         size_t script_path_len = strlen(plugin_path_str) + strlen(plugin_init) + 2;
         char* script_path = malloc(script_path_len);

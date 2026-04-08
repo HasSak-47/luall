@@ -167,6 +167,20 @@ void expand_path(struct Path* self, const struct Path* const cwd) {
 }
 
 char* get_path_string(const struct Path path) {
+    if (path._inner.len == 0) {
+        char* empty = malloc(2);
+        empty[0]    = '.';
+        empty[1]    = '\0';
+        return empty;
+    }
+
+    if (path._inner.len == 1 && path._inner.data[0].ty == ROOT_PATH) {
+        char* root = malloc(2);
+        root[0]    = '/';
+        root[1]    = '\0';
+        return root;
+    }
+
     struct String str = {};
     vector_reserve(str, path._inner.len * 5);
     for (size_t i = 0; i < path._inner.len; ++i) {
