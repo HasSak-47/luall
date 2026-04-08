@@ -16,12 +16,12 @@ LUA_LIBS := $(shell pkg-config --libs lua5.4 2>/dev/null || pkg-config --libs lu
 
 OBJ_DIR := .ignore/build
 
-SRCS := $(wildcard $(SRC_DIR)/*.c)
+SRCS := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/state/*.c)
 
 OUT_RUST_LIB := $(OBJ_DIR)/librewsh.so 
 SRC_RUST_LIB := target/release/librewsh.so
 
-OBJS := $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o,$(SRCS)) $(OUT_RUST_LIB)
+OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS)) $(OUT_RUST_LIB)
 
 OUT := rewsh
 
@@ -49,6 +49,7 @@ $(OUT_RUST_LIB): Cargo.toml
 	cbindgen -c ./cbindgen.toml --output include/bindgen.h
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR):
