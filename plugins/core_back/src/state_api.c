@@ -1,5 +1,3 @@
-
-#include <ctype.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
@@ -9,10 +7,11 @@
 
 #include <path_api.h>
 #include <state_api.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <term.h>
 
+#include <errno.h>
+#include <stdbool.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -22,25 +21,35 @@
 #define LUA_STATE_MT "rewsh.state"
 #define LUA_STATE_VARS_MT "rewsh.state.vars"
 #define LUA_STATE_VARS_USER_MT "rewsh.state.vars.user"
+#define LUA_STATE_VARS_ENV_MT "rewsh.state.vars.env"
 
-// TODO: make it behave like a table if there are multiple values
-// like in PATH
+static struct Path* check_path(lua_State* L, int idx) {
+    return (struct Path*)luaL_checkudata(L, idx, LUA_PATH_MT);
+}
+
+// NOTE: maybe it would be neet to have it behave like a table if there are
+// multiple values like in PATH
 int index_state_vars_env(lua_State* L) {
     const char* name = lua_tostring(L, -1);
-
-    size_t len           = strlen(name);
-    char* name_uppercase = malloc(len + 1);
-    for (size_t i = 0; i < len; ++i) {
-        name_uppercase[i] = tolower(name[i]);
-    }
-
-    const char* env = getenv(name_uppercase);
-    free(name_uppercase);
+    const char* env  = getenv(name);
     if (env != NULL) {
         lua_pushstring(L, env);
         return 1;
     }
 
+    return 0;
+}
+
+int newindex_state_vars_env(lua_State* L) {
+    const char* name = luaL_checkstring(L, 2);
+
+    if (lua_isnil(L, 3)) {
+        unsetenv(name);
+        return 0;
+    }
+
+    const char* value = luaL_checkstring(L, 3);
+    setenv(name, value, true);
     return 0;
 }
 
@@ -77,10 +86,21 @@ int index_state_vars(lua_State* L) {
         luaL_getmetatable(L, LUA_PATH_MT);
         lua_setmetatable(L, -2);
     }
+    else if (strcmp(name, "env") == 0) {
+        lua_createtable(L, 0, 0);
+        luaL_getmetatable(L, LUA_STATE_VARS_ENV_MT);
+        lua_setmetatable(L, -2);
+    }
     else if (strcmp(name, "host") == 0) {
         char* temp = string_to_cstring(state.vars.host);
         lua_pushstring(L, temp);
         free(temp);
+    }
+    else if (strcmp(name, "error") == 0) {
+        lua_pushinteger(L, state.vars.error);
+    }
+    else if (strcmp(name, "debug") == 0) {
+        lua_pushboolean(L, state.vars.debug);
     }
     else {
         return 0;
@@ -118,6 +138,17 @@ int newindex_state(lua_State* L) {
     return 0;
 }
 
+int newindex_state_vars(lua_State* L) {
+    const char* name = lua_tostring(L, 2);
+    if (strcmp(name, "error") == 0) {
+        state.vars.error = luaL_checkinteger(L, 3);
+    }
+    else if (strcmp(name, "debug") == 0) {
+        state.vars.debug = lua_toboolean(L, 3);
+    }
+    return 0;
+}
+
 int lua_set_raw_mode(lua_State* _) {
     set_raw_mode();
     return 0;
@@ -138,6 +169,52 @@ int lua_leave_alternate_screen(lua_State* _) {
     return 0;
 }
 
+int lua_change_cwd(lua_State* L) {
+    struct Path path     = {};
+    bool should_destruct = false;
+
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        path = parse_path(lua_tostring(L, 1));
+        expand_path(&path, &state.vars.cwd);
+        should_destruct = true;
+    }
+    else {
+        struct Path* input = check_path(L, 1);
+        path               = clone_path(input);
+        expand_path(&path, &state.vars.cwd);
+        should_destruct = true;
+    }
+
+    char* path_str = get_path_string(path);
+    if (chdir(path_str) != 0) {
+        int error = errno;
+        if (should_destruct) {
+            destruct_path(&path);
+        }
+        lua_pushnil(L);
+        lua_pushstring(L, strerror(error));
+        free(path_str);
+        return 2;
+    }
+
+    destruct_path(&state.vars.cwd);
+    state.vars.cwd = path;
+    free(path_str);
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+void create_state_vars_env_metatable(lua_State* L) {
+    if (luaL_newmetatable(L, LUA_STATE_VARS_ENV_MT)) {
+        lua_pushcfunction(L, index_state_vars_env);
+        lua_setfield(L, -2, "__index");
+        lua_pushcfunction(L, newindex_state_vars_env);
+        lua_setfield(L, -2, "__newindex");
+    }
+    lua_pop(L, 1);
+}
+
 void create_state_vars_user_metatable(lua_State* L) {
     if (luaL_newmetatable(L, LUA_STATE_VARS_USER_MT)) {
         lua_pushcfunction(L, index_state_vars_user);
@@ -150,6 +227,8 @@ void create_state_vars_metatable(lua_State* L) {
     if (luaL_newmetatable(L, LUA_STATE_VARS_MT)) {
         lua_pushcfunction(L, index_state_vars);
         lua_setfield(L, -2, "__index");
+        lua_pushcfunction(L, newindex_state_vars);
+        lua_setfield(L, -2, "__newindex");
     }
     lua_pop(L, 1);
 }
@@ -168,6 +247,7 @@ void state_setup_lua_api(lua_State* L) {
     create_state_metatable(L);
     create_state_vars_metatable(L);
     create_state_vars_user_metatable(L);
+    create_state_vars_env_metatable(L);
 
     lua_getglobal(L, "rewsh");
     if (!lua_istable(L, -1)) {
@@ -189,6 +269,9 @@ void state_setup_lua_api(lua_State* L) {
 
     lua_pushcfunction(L, lua_leave_alternate_screen);
     lua_setfield(L, -2, "leave_alternate_screen");
+
+    lua_pushcfunction(L, lua_change_cwd);
+    lua_setfield(L, -2, "cd");
     lua_pop(L, 1);
 
     // setup state table
@@ -199,59 +282,3 @@ void state_setup_lua_api(lua_State* L) {
 
     return;
 }
-
-// struct PluginHandler {
-//     struct Plugin* plugin;
-//     union {
-//         struct {
-//             void* handler;
-//             SetupFunction setup;
-//             DestructFunction destruct;
-//         } c;
-//
-//         struct {
-//         } lua;
-//     };
-// };
-//
-// DefineVector(VectorPluginHandler, struct PluginHandler);
-//
-// // Luall.vars
-// struct User {
-//     char* name;
-//     struct Path home;
-// };
-//
-// struct Vars {
-//     struct User user;
-//     struct Path cwd;
-//     char* host;
-//     int error;
-//     bool debug;
-// };
-//
-// struct Config {
-//     struct Path config;
-//     struct Path cache;
-//     struct Path plugins;
-// };
-//
-// struct ShellState {
-//     struct Vars vars;
-//     struct Config config;
-//     struct VectorPluginHandler plugins;
-//     bool running;
-//     bool reload;
-//     lua_State* L;
-// };
-//
-// extern struct ShellState state;
-//
-// void init_shell_state();
-// void end_shell_state();
-//
-// void get_current_state();
-// void update_current_state();
-//
-// void set_raw_mode();
-// void unset_raw_mode();

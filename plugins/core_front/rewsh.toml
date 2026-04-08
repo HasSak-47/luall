@@ -1,5 +1,5 @@
 [plugin]
-name = "core_back"
+name = "core"
 version = "0.1.0"
 edition = "0.1.0"
 kind = "C"

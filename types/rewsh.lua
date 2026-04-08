@@ -11,7 +11,9 @@
 ---@field name string
 ---
 ---@class RewshStateVars
----@field env {string:string}
+---@field error integer
+---@field debug boolean
+---@field env { [string]: string }
 ---@field cwd RewshPath
 ---@field host string
 ---@field user RewshStateVarsUser
@@ -76,6 +78,8 @@
 ---@field process RewshProcessApi
 ---@field path RewshPathApi
 ---@field on_event RewshOnEvent
+---@field cwd fun(path: string|RewshPath): boolean|nil, string|nil
+---@field cd fun(path: string|RewshPath): boolean|nil, string|nil
 ---@field set_raw_mode fun()
 ---@field unset_raw_mode fun()
 ---@field enter_alternate_screen fun()

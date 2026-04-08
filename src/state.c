@@ -58,6 +58,24 @@ int c_plugin_setup(lua_State* L) {
     return handler->c.setup(L);
 }
 
+int lua_plugin_setup(lua_State* L) {
+    lua_getfield(L, 1, "handler");
+    struct PluginHandler* handler = lua_touserdata(L, -1);
+    lua_pop(L, 1);
+
+    if (!handler || handler->lua.setup_reference == LUA_NOREF) {
+        return 0;
+    }
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, handler->lua.setup_reference);
+    lua_pushvalue(L, 1);
+    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+        return lua_error(L);
+    }
+
+    return 0;
+}
+
 int plugin_load(lua_State* L) {
     debug_printf("loading plugin...\n");
     const char* path     = lua_tostring(L, -1);
@@ -85,8 +103,66 @@ int plugin_load(lua_State* L) {
         lua_pushcfunction(L, c_plugin_setup);
         lua_setfield(L, -2, "setup");
     } break;
-    case PLUGIN_KIND_LUA:
-        // TODO: lua plugins
+    case PLUGIN_KIND_LUA: {
+        struct PluginHandler handler = {.plugin = p,
+            .lua                        = {.setup_reference = LUA_NOREF,
+                                           .destruct_reference = LUA_NOREF}};
+        char* plugin_path_str = plugin_get_path(p);
+        const char* plugin_init = "init.lua";
+        size_t script_path_len = strlen(plugin_path_str) + strlen(plugin_init) + 2;
+        char* script_path = malloc(script_path_len);
+        snprintf(script_path, script_path_len, "%s/%s", plugin_path_str,
+            plugin_init);
+        if (luaL_loadfile(L, script_path) != LUA_OK) {
+            free(plugin_path_str);
+            free(script_path);
+            return lua_error(L);
+        }
+
+        if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
+            free(plugin_path_str);
+            free(script_path);
+            return lua_error(L);
+        }
+
+        if (!lua_istable(L, -1)) {
+            free(plugin_path_str);
+            free(script_path);
+            return luaL_error(L,
+                "failed to load lua plugin '%s': entrypoint must return a table",
+                path);
+        }
+
+        lua_getfield(L, -1, "setup");
+        if (lua_isfunction(L, -1)) {
+            handler.lua.setup_reference = luaL_ref(L, LUA_REGISTRYINDEX);
+        }
+        else {
+            lua_pop(L, 1);
+        }
+
+        lua_getfield(L, -1, "destruct");
+        if (lua_isfunction(L, -1)) {
+            handler.lua.destruct_reference = luaL_ref(L, LUA_REGISTRYINDEX);
+        }
+        else {
+            lua_pop(L, 1);
+        }
+
+        lua_pop(L, 1);
+
+        vector_push(state.plugins, handler);
+        struct PluginHandler* ptr = &state.plugins.data[state.plugins.len - 1];
+
+        lua_createtable(L, 0, 0);
+        lua_pushlightuserdata(L, ptr);
+        lua_setfield(L, -2, "handler");
+        lua_pushcfunction(L, lua_plugin_setup);
+        lua_setfield(L, -2, "setup");
+
+        free(plugin_path_str);
+        free(script_path);
+    } break;
     default:
         return 0;
     }
@@ -228,6 +304,15 @@ void end_shell_state() {
         enum PluginKind kind          = plugin_get_kind(handler->plugin);
         if (kind == PLUGIN_KIND_C) {
             handler->c.destruct(state.L);
+        }
+        else if (kind == PLUGIN_KIND_LUA
+            && handler->lua.destruct_reference != LUA_NOREF) {
+            lua_rawgeti(state.L, LUA_REGISTRYINDEX, handler->lua.destruct_reference);
+            if (lua_pcall(state.L, 0, 0, 0) != LUA_OK) {
+                printf("Lua plugin destruct error: %s\n",
+                    lua_tostring(state.L, -1));
+                lua_pop(state.L, 1);
+            }
         }
     }
 
