@@ -26,7 +26,7 @@ static struct PathSegment build_segment(const struct String name) {
 }
 
 bool path_is_dir(const struct Path* const p) {
-    char* path_str = get_path_string(*p);
+    char* path_str = path_get_string(*p);
     struct stat s  = {};
     stat(path_str, &s);
     bool isdir = S_ISDIR(s.st_mode);
@@ -34,7 +34,7 @@ bool path_is_dir(const struct Path* const p) {
     return isdir;
 }
 
-void push_name(struct Path* path, const char* name) {
+void path_push_name(struct Path* path, const char* name) {
     size_t len                 = strlen(name);
     struct String nname        = string_read_n(name, len);
     struct PathSegment segment = build_segment(nname);
@@ -42,27 +42,27 @@ void push_name(struct Path* path, const char* name) {
     vector_push(path->_inner, segment);
 }
 
-void push_name_cstring(struct Path* path, const char* name) {
+void path_push_cstring(struct Path* path, const char* name) {
     struct PathSegment segment = build_segment(string_from_cstr(name));
 
     vector_push(path->_inner, segment);
 }
 
-void push_name_string(struct Path* path, struct String name) {
+void path_push_name_string(struct Path* path, struct String name) {
     struct PathSegment segment = build_segment(name);
 
     vector_push(path->_inner, segment);
 }
 
-void push_segment(struct Path* path, const struct PathSegment segment) {
+void path_push_segment(struct Path* path, const struct PathSegment segment) {
     vector_push(path->_inner, segment);
 }
 
-struct Path root_path() {
+struct Path path_root() {
     struct PathSegment segment = {.ty = ROOT_PATH, .name = {}};
 
     struct Path path = {};
-    push_segment(&path, segment);
+    path_push_segment(&path, segment);
 
     return path;
 }
@@ -74,14 +74,14 @@ static struct PathSegment make_segment(
     return build_segment(name);
 }
 
-struct Path parse_path(const char* path) {
+struct Path path_parse(const char* path) {
     struct Path _path = {};
 
     size_t start = 0;
     size_t i     = 0;
 
     if (path[0] == '/') {
-        _path = root_path();
+        _path = path_root();
         start = 1;
         i     = 1;
     }
@@ -90,39 +90,39 @@ struct Path parse_path(const char* path) {
 
     for (; i < cs.len; ++i) {
         if (cs.data[i] == '/') {
-            push_segment(&_path, make_segment(_path, cs, start, i));
+            path_push_segment(&_path, make_segment(_path, cs, start, i));
 
             start = i + 1;
         }
     }
 
     if (start < cs.len) {
-        push_segment(&_path, make_segment(_path, cs, start, cs.len));
+        path_push_segment(&_path, make_segment(_path, cs, start, cs.len));
     }
 
     free(cs.data);
     return _path;
 }
 
-struct Path clone_path(struct Path* src) {
+struct Path path_clone(struct Path* src) {
     struct Path cpy = {};
     size_t len      = src->_inner.len;
     vector_reserve(cpy._inner, len);
     for (size_t i = 0; i < len; ++i) {
         if (src->_inner.data[i].ty != NAMED_PATH) {
-            push_segment(&cpy,
+            path_push_segment(&cpy,
                 (struct PathSegment){.ty = src->_inner.data[i].ty, .name = {}});
             continue;
         }
 
         struct String name = {};
         vector_clone(name, src->_inner.data[i].name);
-        push_name_string(&cpy, name);
+        path_push_name_string(&cpy, name);
     }
     return cpy;
 }
 
-struct String get_name(struct Path* path) {
+struct String path_get_name(struct Path* path) {
     struct PathSegment last = path->_inner.data[path->_inner.len - 1];
     if (last.ty != NAMED_PATH)
         return (struct String){};
@@ -133,13 +133,13 @@ struct String get_name(struct Path* path) {
 }
 
 TEST(get_path_name) {
-    struct Path path   = parse_path("some/path/foo");
-    struct String name = get_name(&path);
+    struct Path path   = path_parse("some/path/foo");
+    struct String name = path_get_name(&path);
     ASSERT(string_cmp_cstring(name, "foo"), "path name is not foo");
     return 0;
 }
 
-void expand_path(struct Path* self, const struct Path* const cwd) {
+void path_expand(struct Path* self, const struct Path* const cwd) {
     if (self->_inner.data[0].ty == CURR_PATH) {
         struct Path cpy = {};
 
@@ -148,7 +148,7 @@ void expand_path(struct Path* self, const struct Path* const cwd) {
             segment.ty                 = cwd->_inner.data[i].ty;
             vector_clone(segment.name, cwd->_inner.data[i].name);
 
-            push_segment(&cpy, segment);
+            path_push_segment(&cpy, segment);
         }
 
         for (size_t i = 1; i < self->_inner.len; ++i) {
@@ -156,17 +156,17 @@ void expand_path(struct Path* self, const struct Path* const cwd) {
             segment.ty                 = self->_inner.data[i].ty;
             vector_clone(segment.name, self->_inner.data[i].name);
 
-            push_segment(&cpy, segment);
+            path_push_segment(&cpy, segment);
         }
 
-        destruct_path(self);
+        path_destruct(self);
 
         *self = cpy;
     }
     return;
 }
 
-char* get_path_string(const struct Path path) {
+char* path_get_string(const struct Path path) {
     if (path._inner.len == 0) {
         char* empty = malloc(2);
         empty[0]    = '.';
@@ -211,7 +211,7 @@ char* get_path_string(const struct Path path) {
     return d;
 }
 
-void pop_segment(struct Path* path) {
+void path_pop_segment(struct Path* path) {
     if (path->_inner.len < 1) {
         return;
     }
@@ -222,7 +222,7 @@ void pop_segment(struct Path* path) {
     vector_pop(path->_inner);
 }
 
-void destruct_path(struct Path* path) {
+void path_destruct(struct Path* path) {
     for (size_t i = 0; i < path->_inner.len; ++i) {
         struct PathSegment seg = path->_inner.data[i];
         free(seg.name.data);
@@ -232,9 +232,9 @@ void destruct_path(struct Path* path) {
     path->_inner.len  = 0;
 }
 
-struct VectorPath get_childs(struct Path* path) {
+struct VectorPath path_get_childs(struct Path* path) {
     struct VectorPath p = {};
-    char* name          = get_path_string(*path);
+    char* name          = path_get_string(*path);
     DIR* d              = opendir(name);
     if (d == NULL) {
         return p;
@@ -242,7 +242,7 @@ struct VectorPath get_childs(struct Path* path) {
 
     struct dirent* entry = NULL;
 
-    char* tmp = get_path_string(*path);
+    char* tmp = path_get_string(*path);
     free(tmp);
     while ((entry = readdir(d)) != NULL) {
         if (strcmp(entry->d_name, "..") == 0) {
@@ -251,8 +251,8 @@ struct VectorPath get_childs(struct Path* path) {
         if (strcmp(entry->d_name, ".") == 0) {
             continue;
         }
-        struct Path clone = clone_path(path);
-        push_name(&clone, entry->d_name);
+        struct Path clone = path_clone(path);
+        path_push_name(&clone, entry->d_name);
 
         vector_push(p, clone)
     }
@@ -261,7 +261,7 @@ struct VectorPath get_childs(struct Path* path) {
 }
 
 TEST(path_parsing) {
-    struct Path path = parse_path("/test/path");
+    struct Path path = path_parse("/test/path");
     ASSERT(path._inner.data[0].ty == ROOT_PATH, "root path not detected");
     ASSERT(path._inner.data[1].ty == NAMED_PATH,
         "'test' part not detected as named");
@@ -270,8 +270,8 @@ TEST(path_parsing) {
     return 0;
 }
 TEST(path_clonning) {
-    struct Path path = parse_path("/test/path");
-    struct Path copy = clone_path(&path);
+    struct Path path = path_parse("/test/path");
+    struct Path copy = path_clone(&path);
     for (size_t i = 0; i < path._inner.len; ++i) {
         ASSERT(path._inner.data != copy._inner.data,
             "copy just shared the pointer instead of copying");

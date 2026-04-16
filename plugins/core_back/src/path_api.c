@@ -22,7 +22,7 @@ static int lua_new_path(lua_State* L) {
 
 static int lua_get_path_string(lua_State* L) {
     struct Path* path = check_path(L, 1);
-    char* c           = get_path_string(*path);
+    char* c           = path_get_string(*path);
     lua_pushstring(L, c);
     free(c);
 
@@ -31,7 +31,7 @@ static int lua_get_path_string(lua_State* L) {
 static int lua_push_name(lua_State* L) {
     struct Path* path = check_path(L, 1);
     const char* name  = lua_tostring(L, 2);
-    push_name(path, name);
+    path_push_name(path, name);
     return 0;
 }
 
@@ -44,20 +44,20 @@ static int lua_path_is_dir(lua_State* L) {
 
 static int lua_pop_segment(lua_State* L) {
     struct Path* path = check_path(L, 1);
-    pop_segment(path);
+    path_pop_segment(path);
     return 0;
 }
 static int lua_expand_path(lua_State* L) {
     struct Path* path = check_path(L, 1);
     struct Path* cwd  = check_path(L, 2);
-    expand_path(path, cwd);
+    path_expand(path, cwd);
     return 0;
 }
 
 static int lua_parse_path(lua_State* L) {
     const char* str_path = lua_tostring(L, 1);
     struct Path* path    = lua_newuserdata(L, sizeof(struct Path));
-    *path                = parse_path(str_path);
+    *path                = path_parse(str_path);
     luaL_getmetatable(L, LUA_PATH_MT);
     lua_setmetatable(L, -2);
     return 1;
@@ -65,7 +65,7 @@ static int lua_parse_path(lua_State* L) {
 
 static int lua_get_childs(lua_State* L) {
     struct Path* path        = check_path(L, 1);
-    struct VectorPath childs = get_childs(path);
+    struct VectorPath childs = path_get_childs(path);
 
     lua_createtable(L, childs.len, childs.len);
     for (size_t i = 0; i < childs.len; ++i) {
@@ -82,7 +82,7 @@ static int lua_get_childs(lua_State* L) {
  */
 static int lua_get_name(lua_State* L) {
     struct Path* path  = check_path(L, 1);
-    struct String name = get_name(path);
+    struct String name = path_get_name(path);
     char* name_str     = string_to_cstring(name);
     lua_pushstring(L, name_str);
     free(name_str);
@@ -94,7 +94,7 @@ static int lua_get_name(lua_State* L) {
 static int lua_path_gc(lua_State* L) {
     debug_printf("path deletion..\n");
     struct Path* path = check_path(L, -1);
-    destruct_path(path);
+    path_destruct(path);
     return 0;
 }
 

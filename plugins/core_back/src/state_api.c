@@ -62,7 +62,7 @@ int index_state_vars_user(lua_State* L) {
     else if (strcmp(name, "home") == 0) {
         struct Path* path =
             (struct Path*)lua_newuserdata(L, sizeof(struct Path));
-        *path = clone_path(&state.vars.user.home);
+        *path = path_clone(&state.vars.user.home);
         luaL_getmetatable(L, LUA_PATH_MT);
         lua_setmetatable(L, -2);
     }
@@ -82,7 +82,7 @@ int index_state_vars(lua_State* L) {
     else if (strcmp(name, "cwd") == 0) {
         struct Path* path =
             (struct Path*)lua_newuserdata(L, sizeof(struct Path));
-        *path = clone_path(&state.vars.cwd);
+        *path = path_clone(&state.vars.cwd);
         luaL_getmetatable(L, LUA_PATH_MT);
         lua_setmetatable(L, -2);
     }
@@ -174,22 +174,22 @@ int lua_change_cwd(lua_State* L) {
     bool should_destruct = false;
 
     if (lua_type(L, 1) == LUA_TSTRING) {
-        path = parse_path(lua_tostring(L, 1));
-        expand_path(&path, &state.vars.cwd);
+        path = path_parse(lua_tostring(L, 1));
+        path_expand(&path, &state.vars.cwd);
         should_destruct = true;
     }
     else {
         struct Path* input = check_path(L, 1);
-        path               = clone_path(input);
-        expand_path(&path, &state.vars.cwd);
+        path               = path_clone(input);
+        path_expand(&path, &state.vars.cwd);
         should_destruct = true;
     }
 
-    char* path_str = get_path_string(path);
+    char* path_str = path_get_string(path);
     if (chdir(path_str) != 0) {
         int error = errno;
         if (should_destruct) {
-            destruct_path(&path);
+            path_destruct(&path);
         }
         lua_pushnil(L);
         lua_pushstring(L, strerror(error));
@@ -197,7 +197,7 @@ int lua_change_cwd(lua_State* L) {
         return 2;
     }
 
-    destruct_path(&state.vars.cwd);
+    path_destruct(&state.vars.cwd);
     state.vars.cwd = path;
     free(path_str);
 

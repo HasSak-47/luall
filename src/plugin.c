@@ -21,11 +21,11 @@ void get_units(struct VectorPath* v, struct Path curr_dir) {
         return;
     }
 
-    struct VectorPath childs = get_childs(&curr_dir);
+    struct VectorPath childs = path_get_childs(&curr_dir);
 
     for (size_t i = 0; i < childs.len; ++i) {
         struct Path* p     = &childs.data[i];
-        struct String name = get_name(p);
+        struct String name = path_get_name(p);
         // TODO: generate a get_file_ext function
         if (name.data[name.len - 2] == '.' && name.data[name.len - 1] == 'c') {
             vector_push(*v, *p);
@@ -51,9 +51,9 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
 
     debug_printf("loading c plugin %s @ %s\n", name_str, path_str);
 
-    struct Path path         = parse_path(path_str);
-    struct Path include_path = clone_path(&path);
-    push_name(&include_path, "include");
+    struct Path path         = path_parse(path_str);
+    struct Path include_path = path_clone(&path);
+    path_push_name(&include_path, "include");
     free(path_str);
 
     struct VectorPath compilation_units = {0, 0, 0};
@@ -71,13 +71,13 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
     for (size_t i = 0; i < sizeof flags / sizeof flags[0]; ++i) {
         vector_push(args, string_from_cstr(flags[i]));
     }
-    char* include_path_str = get_path_string(include_path);
+    char* include_path_str = path_get_string(include_path);
     vector_push(args, string_from_cstr("-I"));
     vector_push(args, string_from_cstr(include_path_str));
 
     debug_printf("pushing units\n");
     for (size_t i = 0; i < compilation_units.len; ++i) {
-        char* path_str = get_path_string(compilation_units.data[i]);
+        char* path_str = path_get_string(compilation_units.data[i]);
         debug_printf("\tpushing unit: %s @ %p\n", path_str, path_str);
         vector_push(args, string_from_cstr(path_str));
         debug_printf("\tcleaning temp var...\n");
@@ -86,9 +86,9 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
     }
 
     debug_printf("generating cache location\n");
-    struct Path cache_path = clone_path(&state.config.cache);
-    push_name(&cache_path, name_str);
-    char* plugin_cache_path = get_path_string(cache_path);
+    struct Path cache_path = path_clone(&state.config.cache);
+    path_push_name(&cache_path, name_str);
+    char* plugin_cache_path = path_get_string(cache_path);
 
     debug_printf("generating compiler output path\n");
     vector_push(args, string_from_cstr("-o"));
@@ -121,7 +121,7 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
         }
     }
 
-    destruct_path(&path);
+    path_destruct(&path);
     handler.c.handler  = dlopen(argv[args.len - 1], RTLD_LAZY);
     if (!handler.c.handler) {
         printf("failed to load plugin shared object: %s\n", dlerror());

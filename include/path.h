@@ -24,27 +24,27 @@ struct Path {
     struct InnerVectorPath _inner;
 };
 
-char* get_path_string(const struct Path path);
-void push_name(struct Path* path, const char* name);
+char* path_get_string(const struct Path path);
+void path_push_name(struct Path* path, const char* name);
 bool path_is_dir(const struct Path* const p);
 /* takes ownership of the string */
-void push_name_string(struct Path* path, struct String name);
-void push_segment(struct Path* path, const struct PathSegment segment);
-void pop_segment(struct Path* path);
+void path_push_name_string(struct Path* path, struct String name);
+void path_push_segment(struct Path* path, const struct PathSegment segment);
+void path_pop_segment(struct Path* path);
 
-void expand_path(struct Path* self, const struct Path* const cwd);
+void path_expand(struct Path* self, const struct Path* const cwd);
 
-struct Path root_path();
-struct Path parse_path(const char* path);
+struct Path path_root();
+struct Path path_parse(const char* path);
 
-void destruct_path(struct Path* path);
-struct Path clone_path(struct Path* path);
-struct VectorPath get_childs(struct Path* path);
+void path_destruct(struct Path* path);
+struct Path path_clone(struct Path* path);
+struct VectorPath path_get_childs(struct Path* path);
 /*
  * returns a copy of the last path segment if it is a named type, empty string
  * if it is not
  */
-struct String get_name(struct Path* path);
+struct String path_get_name(struct Path* path);
 
 DefineVector(VectorPath, struct Path);
 

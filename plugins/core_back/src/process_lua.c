@@ -41,7 +41,7 @@ static enum BindType lua_check_bind_type(lua_State* L, int idx) {
 
 static int lua_pipe_new(lua_State* L) {
     struct Pipe* p = (struct Pipe*)lua_newuserdata(L, sizeof(struct Pipe));
-    *p             = new_pipe();
+    *p             = pipe_new();
 
     luaL_getmetatable(L, LUA_PIPE_MT);
     lua_setmetatable(L, -2);
@@ -50,19 +50,19 @@ static int lua_pipe_new(lua_State* L) {
 
 static int lua_pipe_close(lua_State* L) {
     struct Pipe* p = check_pipe(L, 1);
-    close_pipe(p);
+    pipe_close(p);
     return 0;
 }
 
 static int lua_pipe_gc(lua_State* L) {
     struct Pipe* p = check_pipe(L, 1);
-    close_pipe(p);
+    pipe_close(p);
     return 0;
 }
 
 static int lua_pipe_read(lua_State* L) {
     struct Pipe* p    = check_pipe(L, 1);
-    struct String str = read_pipe(p);
+    struct String str = pipe_read(p);
     char* s           = string_to_cstring(str);
     lua_pushstring(L, s);
 
@@ -76,7 +76,7 @@ static int lua_pipe_write(lua_State* L) {
     struct Pipe* p     = check_pipe(L, 1);
     const char* s      = lua_tostring(L, 2);
     struct String data = string_from_cstr(s);
-    write_pipe(p, data);
+    pipe_write(p, data);
     free(data.data);
 
     return 0;
@@ -89,7 +89,7 @@ static int lua_command_new(lua_State* L) {
 
     struct Command* cmd =
         (struct Command*)lua_newuserdata(L, sizeof(struct Command));
-    *cmd = new_command(path);
+    *cmd = command_new(path);
 
     luaL_getmetatable(L, LUA_COMMAND_MT);
     lua_setmetatable(L, -2);
@@ -106,7 +106,7 @@ static int lua_command_reserve_size(lua_State* L) {
 static int lua_command_add_arg(lua_State* L) {
     struct Command* cmd = check_command(L, 1);
     const char* arg     = luaL_checkstring(L, 2);
-    add_arg(cmd, arg);
+    command_add_arg(cmd, arg);
     return 0;
 }
 
@@ -115,13 +115,13 @@ static int lua_command_bind_pipe(lua_State* L) {
     struct Pipe* pipe   = check_pipe(L, 2);
     enum BindType ty    = lua_check_bind_type(L, 3);
 
-    bind_pipe(cmd, pipe, ty);
+    command_bind_pipe(cmd, pipe, ty);
     return 0;
 }
 
 static int lua_command_run(lua_State* L) {
     struct Command* cmd = check_command(L, 1);
-    pid_t pid           = run(cmd);
+    pid_t pid           = command_run(cmd);
     lua_pushinteger(L, (lua_Integer)pid);
     return 1;
 }
@@ -132,14 +132,14 @@ static int lua_command_wait(lua_State* L) {
         luaL_error(L, "command not running");
         return 1;
     }
-    int status = wait_process(cmd->running_pid);
+    int status = process_wait(cmd->running_pid);
     lua_pushinteger(L, (lua_Integer)status);
     return 1;
 }
 
 static int lua_process_wait(lua_State* L) {
     pid_t pid  = (pid_t)luaL_checkinteger(L, 1);
-    int status = wait_process(pid);
+    int status = process_wait(pid);
     lua_pushinteger(L, (lua_Integer)status);
     return 1;
 }

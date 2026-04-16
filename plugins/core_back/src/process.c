@@ -28,7 +28,7 @@
  * cmd |& cmd === cmd 2>&1 | cmd
  */
 
-struct Pipe new_pipe() {
+struct Pipe pipe_new() {
     struct Pipe p = {};
     int r         = pipe(p.p);
     if (r < 0)
@@ -37,7 +37,7 @@ struct Pipe new_pipe() {
     return p;
 }
 
-void close_pipe(struct Pipe* p) {
+void pipe_close(struct Pipe* p) {
     close(p->p[0]);
     close(p->p[1]);
 }
@@ -45,7 +45,7 @@ void close_pipe(struct Pipe* p) {
 /**
  * takes an string cmd and clones it
  */
-struct Command new_command(const char* cmd) {
+struct Command command_new(const char* cmd) {
     struct Command c = {
         .cmd        = strdup(cmd),
         .args       = {0, 0, 0},
@@ -55,12 +55,13 @@ struct Command new_command(const char* cmd) {
     };
     debug_printf("creating cmd for path: %p %s\n", cmd, cmd);
     // first arg is the name
-    add_arg(&c, cmd);
+    command_add_arg(&c, cmd);
 
     return c;
 }
 
-void bind_pipe(struct Command* cmd, struct Pipe* pipe, enum BindType type) {
+void command_bind_pipe(
+    struct Command* cmd, struct Pipe* pipe, enum BindType type) {
     struct PipeBind binding = {pipe, type};
     debug_printf("binding %p(%d %d) pipe for cmd %p with bind %d\n", pipe,
         pipe->p[0], pipe->p[1], cmd, (int)type);
@@ -75,7 +76,7 @@ void command_reserve_size(struct Command* cmd, size_t argc) {
 /**
  * takes an string and and clones it
  */
-void add_arg(struct Command* cmd, const char* arg) {
+void command_add_arg(struct Command* cmd, const char* arg) {
     debug_printf("add_arg: %p %s\n", arg, arg);
     char* clone_arg = arg != NULL ? strdup(arg) : NULL;
     vector_push(cmd->args, clone_arg);
@@ -87,9 +88,9 @@ void add_arg(struct Command* cmd, const char* arg) {
  * It frees all the command info at exit
  * returns the pid of the child, it does not wait for it to stop
  */
-pid_t run(struct Command* p) {
+pid_t command_run(struct Command* p) {
     // all commands must end with a trailing NULL
-    add_arg(p, NULL);
+    command_add_arg(p, NULL);
     if (state.vars.debug) {
         debug_printf("[parent]: running command: %s", p->cmd);
         for (size_t i = 0; i < p->args.len; ++i) {
@@ -166,7 +167,7 @@ pid_t run(struct Command* p) {
     return pid;
 }
 
-int wait_process(pid_t pid) {
+int process_wait(pid_t pid) {
     int status = 0;
     if (waitpid(pid, &status, 0) == -1) {
         temporal_suicide_msg("[parent]: waitpid failed");
@@ -180,7 +181,7 @@ int wait_process(pid_t pid) {
 
 #define BUFFER_LEN 256
 
-struct String read_pipe(struct Pipe* p) {
+struct String pipe_read(struct Pipe* p) {
     struct String str       = {};
     char buffer[BUFFER_LEN] = {};
     size_t bytes_read       = read(p->p[0], buffer, BUFFER_LEN);
@@ -198,6 +199,6 @@ struct String read_pipe(struct Pipe* p) {
     return str;
 }
 
-void write_pipe(struct Pipe* p, struct String data) {
+void pipe_write(struct Pipe* p, struct String data) {
     write(p->p[1], data.data, data.len);
 }

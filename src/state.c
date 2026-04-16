@@ -34,22 +34,22 @@ void init_shell_variables() {
     // no getpwuid_r cuz it is ez and I (hopefully) just need a single thread
     struct passwd* p     = getpwuid(uid);
     state.vars.user.name = string_from_cstr(p->pw_name);
-    state.vars.user.home = parse_path(p->pw_dir);
+    state.vars.user.home = path_parse(p->pw_dir);
 
     char buf[256] = {};
     getcwd(buf, 256);
-    state.vars.cwd = parse_path(buf);
+    state.vars.cwd = path_parse(buf);
 }
 
 void init_shell_config() {
     state.manager        = new_plugin_manager();
-    state.config.plugins = parse_path(PLUGIN_PATH);
-    state.config.config  = parse_path(CONFIG_PATH);
-    state.config.cache   = parse_path(CACHE_PATH);
+    state.config.plugins = path_parse(PLUGIN_PATH);
+    state.config.config  = path_parse(CONFIG_PATH);
+    state.config.cache   = path_parse(CACHE_PATH);
 
-    expand_path(&state.config.plugins, &state.vars.cwd);
-    expand_path(&state.config.config, &state.vars.cwd);
-    expand_path(&state.config.cache, &state.vars.cwd);
+    path_expand(&state.config.plugins, &state.vars.cwd);
+    path_expand(&state.config.config, &state.vars.cwd);
+    path_expand(&state.config.cache, &state.vars.cwd);
 }
 
 int c_plugin_setup(lua_State* L) {
@@ -336,7 +336,7 @@ void init_shell_state() {
     init_shell_variables();
     init_shell_config();
 
-    char* path = get_path_string(state.config.config);
+    char* path = path_get_string(state.config.config);
     debug_printf("running init: %s\n", path);
     if (luaL_dofile(state.L, path) != LUA_OK) {
         const char* err = lua_tostring(state.L, -1); // error message on stack
@@ -360,10 +360,10 @@ void end_shell_state() {
     free(state.vars.host.data);
     free(state.vars.user.name.data);
 
-    destruct_path(&state.vars.cwd);
-    destruct_path(&state.vars.user.home);
-    destruct_path(&state.config.plugins);
-    destruct_path(&state.config.config);
+    path_destruct(&state.vars.cwd);
+    path_destruct(&state.vars.user.home);
+    path_destruct(&state.config.plugins);
+    path_destruct(&state.config.config);
 
     for (size_t i = 0; i < state.plugins.len; ++i) {
         struct PluginHandler* handler = &state.plugins.data[i];

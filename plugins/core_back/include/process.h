@@ -33,19 +33,19 @@ struct Command {
     struct PipeBind pipe;
 };
 
-struct Pipe new_pipe();
-void close_pipe(struct Pipe* p);
-struct Command new_command(const char* path);
+struct Pipe pipe_new();
+void pipe_close(struct Pipe* p);
+struct Command command_new(const char* path);
 
 void command_reserve_size(struct Command* cmd, size_t size);
-void bind_pipe(struct Command* cmd, struct Pipe* pipe, enum BindType ty);
-void add_arg(struct Command* cmd, const char* arg);
+void command_bind_pipe(struct Command* cmd, struct Pipe* pipe, enum BindType ty);
+void command_add_arg(struct Command* cmd, const char* arg);
 
-pid_t run(struct Command* p);
-int wait_process(pid_t pid);
+pid_t command_run(struct Command* p);
+int process_wait(pid_t pid);
 
-struct String read_pipe(struct Pipe* o);
-void write_pipe(struct Pipe* o, struct String data);
+struct String pipe_read(struct Pipe* o);
+void pipe_write(struct Pipe* o, struct String data);
 
 void process_setup_lua_api(lua_State* state);
 
