@@ -95,61 +95,6 @@ local function render_input()
 end
 
 ---@return nil
-local function submit_input()
-    local front = rewsh.front
-    local line = front.vars.input.data
-
-    io.stdout:write("\r" .. front.prompt() .. line .. "\n")
-
-    local ok, err = pcall(front.api.parse, line)
-    if not ok then
-        print(err)
-    end
-
-    front.vars.input.data = ""
-    front.vars.input.index = 0
-end
-
----@param input RewshInputKey
----@return nil
-local function handle_input(input)
-    local front = rewsh.front
-    local input_state = front.vars.input
-
-    if input.kind == "letter" then
-        if input.letter == "c" and input.ctrl then
-            rewsh.state.running = false
-            return
-        end
-
-        local start = input_state.data:sub(1, input_state.index)
-        local finish = input_state.data:sub(input_state.index + 1)
-        input_state.data = start .. input.letter .. finish
-        input_state.index = input_state.index + 1
-    elseif input.kind == "special" then
-        if input.special == "left" then
-            if input_state.index > 0 then
-                input_state.index = input_state.index - 1
-            end
-        elseif input.special == "right" then
-            if input_state.index < input_state.data:len() then
-                input_state.index = input_state.index + 1
-            end
-        elseif input.special == "backspace" then
-            if input_state.index > 0 then
-                local start = input_state.data:sub(1, input_state.index - 1)
-                local finish = input_state.data:sub(input_state.index + 1)
-                input_state.data = start .. finish
-                input_state.index = input_state.index - 1
-            end
-        elseif input.special == "enter" then
-            submit_input()
-        end
-    end
-
-    render_input()
-end
-
 ---@return nil
 local function setup_front_namespace()
     rewsh.front = rewsh.front or {}
@@ -179,7 +124,6 @@ local function setup_front_namespace()
     rewsh.front.prompt = prompt
     rewsh.front.prompts.prompt = prompt
     rewsh.front.render_input = render_input
-    rewsh.front.handle_input = handle_input
     rewsh.front.api.parse = parser.parse
     rewsh.front.api.tokenize = parser.tokenize
 end
@@ -243,10 +187,5 @@ return {
     setup = function()
         setup_front_namespace()
         setup_builtins()
-
-        rewsh.api.on_event("enter", rewsh.api.set_raw_mode)
-        rewsh.api.on_event("exit", rewsh.api.unset_raw_mode)
-        rewsh.api.on_event("enter", rewsh.front.render_input)
-        rewsh.api.on_event("key_input", rewsh.front.handle_input)
     end,
 }

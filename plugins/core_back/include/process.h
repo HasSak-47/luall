@@ -44,6 +44,9 @@ void add_arg(struct Command* cmd, const char* arg);
 pid_t run(struct Command* p);
 int wait_process(pid_t pid);
 
+struct String read_pipe(struct Pipe* o);
+void write_pipe(struct Pipe* o, struct String data);
+
 void process_setup_lua_api(lua_State* state);
 
 #endif

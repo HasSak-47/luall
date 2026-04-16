@@ -2,8 +2,10 @@
 #include <lua.h>
 #include <lualib.h>
 
+#include <stdlib.h>
 #include <string.h>
 
+#include "ly_string.h"
 #include "process.h"
 
 #define LUA_COMMAND_MT "rewsh.api.process.command"
@@ -55,6 +57,23 @@ static int lua_pipe_close(lua_State* L) {
 static int lua_pipe_gc(lua_State* L) {
     struct Pipe* p = check_pipe(L, 1);
     close_pipe(p);
+    return 0;
+}
+
+static int lua_pipe_read(lua_State* L) {
+    struct Pipe* p = check_pipe(L, 1);
+    write_pipe(p, data);
+
+    return 0;
+}
+
+static int lua_pipe_write(lua_State* L) {
+    struct Pipe* p     = check_pipe(L, 1);
+    const char* s      = lua_tostring(L, 2);
+    struct String data = string_from_cstr(s);
+    write_pipe(p, data);
+    free(data.data);
+
     return 0;
 }
 

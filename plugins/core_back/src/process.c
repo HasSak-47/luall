@@ -177,3 +177,26 @@ int wait_process(pid_t pid) {
 
     return status;
 }
+
+#define BUFFER_LEN 256
+
+struct String read_pipe(struct Pipe* p) {
+    struct String str       = {};
+    char buffer[BUFFER_LEN] = {};
+    size_t bytes_read       = read(p->p[0], buffer, BUFFER_LEN);
+
+    size_t iters = 0;
+    while (bytes_read != 0) {
+        vector_reserve(str, str.cap + BUFFER_LEN);
+        for (size_t i = 0; i < BUFFER_LEN; ++i) {
+            str.data[iters * BUFFER_LEN + i] = buffer[i];
+        }
+        iters += 1;
+    }
+
+    return str;
+}
+
+void write_pipe(struct Pipe* p, struct String data) {
+    write(p->p[1], data.data, data.len);
+}
