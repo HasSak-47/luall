@@ -61,8 +61,13 @@ static int lua_pipe_gc(lua_State* L) {
 }
 
 static int lua_pipe_read(lua_State* L) {
-    struct Pipe* p = check_pipe(L, 1);
-    write_pipe(p, data);
+    struct Pipe* p    = check_pipe(L, 1);
+    struct String str = read_pipe(p);
+    char* s           = string_to_cstring(str);
+    lua_pushstring(L, s);
+
+    free(s);
+    free(str.data);
 
     return 0;
 }
@@ -160,6 +165,9 @@ static int lua_command_gc(lua_State* L) {
 /* ---------- method tables ---------- */
 
 static const luaL_Reg pipe_methods[] = {
+    {"close", lua_pipe_close},
+    {"write", lua_pipe_write},
+    { "read",  lua_pipe_read},
     {"close", lua_pipe_close},
     {   NULL,           NULL}
 };
