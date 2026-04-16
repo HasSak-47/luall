@@ -192,6 +192,7 @@ struct String read_pipe(struct Pipe* p) {
             str.data[iters * BUFFER_LEN + i] = buffer[i];
         }
         iters += 1;
+        bytes_read = read(p->p[0], buffer, BUFFER_LEN);
     }
 
     return str;

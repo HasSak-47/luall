@@ -1,6 +1,6 @@
-local core = rewsh.plugin.load("app://core_back")
+local core = rewsh.plugin.load("core://core_back")
 core:setup()
-local front = rewsh.plugin.load("app://core_front")
+local front = rewsh.plugin.load("core://core_front")
 front:setup()
 
 local buffer = {

@@ -76,10 +76,14 @@ struct Hook {
 DefineVector(VectorHook, struct Hook);
 
 struct ShellState {
+    // args passed to the shell
+    struct VectorString args;
     struct Vars vars;
     struct Config config;
-    struct VectorPluginHandler plugins;
     struct VectorHook hooks;
+
+    struct PluginManager* manager;
+    struct VectorPluginHandler plugins;
     bool running;
     bool reload;
     lua_State* L;

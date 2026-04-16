@@ -20,13 +20,32 @@ typedef struct Args Args;
 
 typedef struct Plugin Plugin;
 
+typedef struct PluginManager PluginManager;
+
+const struct Plugin *add_or_get_plugin(struct PluginManager *manager_ptr,
+                                       const char *path);
+
+struct Plugin *add_plugin(struct PluginManager *manager_ptr,
+                          const char *path);
+
+void delete_plugin_manager(struct PluginManager *ptr);
+
 void free_args(struct Args *args);
 
-struct Plugin *get_plugin(const char *path);
+struct Plugin *get_plugin(struct PluginManager *manager_ptr,
+                          const char *path);
 
 const char *get_script(const struct Args *args);
 
 bool is_debug(const struct Args *args);
+
+char is_plugin_loaded(struct PluginManager *manager_ptr,
+                      const char *path);
+
+char mark_plugin_as_loaded(struct PluginManager *manager_ptr,
+                           const char *path);
+
+struct PluginManager *new_plugin_manager(void);
 
 struct Args *parse_args(int argc, const char *const *argv);
 

@@ -42,6 +42,7 @@ void init_shell_variables() {
 }
 
 void init_shell_config() {
+    state.manager        = new_plugin_manager();
     state.config.plugins = parse_path(PLUGIN_PATH);
     state.config.config  = parse_path(CONFIG_PATH);
     state.config.cache   = parse_path(CACHE_PATH);
@@ -76,7 +77,8 @@ int lua_plugin_setup(lua_State* L) {
     return 0;
 }
 
-static int package_prepend_path(lua_State* L, const char* field, const char* entry) {
+static int package_prepend_path(
+    lua_State* L, const char* field, const char* entry) {
     lua_getglobal(L, "package");
     if (!lua_istable(L, -1)) {
         lua_pop(L, 1);
@@ -97,21 +99,21 @@ static int package_prepend_path(lua_State* L, const char* field, const char* ent
 }
 
 static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
-    size_t base_len = strlen(plugin_path);
-    const char* lua_suffix = "/lua/?.lua";
+    size_t base_len             = strlen(plugin_path);
+    const char* lua_suffix      = "/lua/?.lua";
     const char* lua_init_suffix = "/lua/?/init.lua";
-    const char* c_suffix = "/?.so";
+    const char* c_suffix        = "/?.so";
 
-    char* lua_path = malloc(base_len + strlen(lua_suffix) + 1);
+    char* lua_path      = malloc(base_len + strlen(lua_suffix) + 1);
     char* lua_init_path = malloc(base_len + strlen(lua_init_suffix) + 1);
-    char* c_path = malloc(base_len + strlen(c_suffix) + 1);
+    char* c_path        = malloc(base_len + strlen(c_suffix) + 1);
 
-    snprintf(lua_path, base_len + strlen(lua_suffix) + 1, "%s%s",
-        plugin_path, lua_suffix);
+    snprintf(lua_path, base_len + strlen(lua_suffix) + 1, "%s%s", plugin_path,
+        lua_suffix);
     snprintf(lua_init_path, base_len + strlen(lua_init_suffix) + 1, "%s%s",
         plugin_path, lua_init_suffix);
-    snprintf(c_path, base_len + strlen(c_suffix) + 1, "%s%s", plugin_path,
-        c_suffix);
+    snprintf(
+        c_path, base_len + strlen(c_suffix) + 1, "%s%s", plugin_path, c_suffix);
 
     int status = package_prepend_path(L, "path", lua_init_path);
     if (status == 0) {
@@ -129,8 +131,13 @@ static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
 
 int plugin_load(lua_State* L) {
     debug_printf("loading plugin...\n");
-    const char* path     = lua_tostring(L, -1);
-    struct Plugin* p     = get_plugin(path);
+    const char* path = lua_tostring(L, -1);
+    struct Plugin* p = add_plugin(state.manager, path);
+    if (p == NULL) {
+        debug_printf("failed to load plugin: %s\n", path);
+        exit(-1);
+        return 0;
+    }
     enum PluginKind kind = plugin_get_kind(p);
     debug_printf("loading plugin @ %s\n", path);
 
@@ -155,16 +162,19 @@ int plugin_load(lua_State* L) {
         lua_setfield(L, -2, "setup");
     } break;
     case PLUGIN_KIND_LUA: {
-        struct PluginHandler handler = {.plugin = p,
-            .lua                        = {.setup_reference = LUA_NOREF,
-                                           .destruct_reference = LUA_NOREF}};
+        struct PluginHandler handler = {
+            .plugin = p,
+            .lua    = {
+                       .setup_reference = LUA_NOREF, .destruct_reference = LUA_NOREF}
+        };
         char* plugin_path_str = plugin_get_path(p);
         if (register_plugin_module_paths(L, plugin_path_str) != 0) {
             free(plugin_path_str);
             return lua_error(L);
         }
         const char* plugin_init = "init.lua";
-        size_t script_path_len = strlen(plugin_path_str) + strlen(plugin_init) + 2;
+        size_t script_path_len =
+            strlen(plugin_path_str) + strlen(plugin_init) + 2;
         char* script_path = malloc(script_path_len);
         snprintf(script_path, script_path_len, "%s/%s", plugin_path_str,
             plugin_init);
@@ -346,6 +356,7 @@ void get_current_state() {}
  * cleanins the shell state
  */
 void end_shell_state() {
+    delete_plugin_manager(state.manager);
     free(state.vars.host.data);
     free(state.vars.user.name.data);
 
@@ -360,9 +371,10 @@ void end_shell_state() {
         if (kind == PLUGIN_KIND_C) {
             handler->c.destruct(state.L);
         }
-        else if (kind == PLUGIN_KIND_LUA
-            && handler->lua.destruct_reference != LUA_NOREF) {
-            lua_rawgeti(state.L, LUA_REGISTRYINDEX, handler->lua.destruct_reference);
+        else if (kind == PLUGIN_KIND_LUA &&
+                 handler->lua.destruct_reference != LUA_NOREF) {
+            lua_rawgeti(
+                state.L, LUA_REGISTRYINDEX, handler->lua.destruct_reference);
             if (lua_pcall(state.L, 0, 0, 0) != LUA_OK) {
                 printf("Lua plugin destruct error: %s\n",
                     lua_tostring(state.L, -1));
