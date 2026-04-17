@@ -1,5 +1,5 @@
 [plugin]
-name = "core_back"
+name = "extension"
 version = "0.1.0"
 edition = "0.1.0"
-kind = "C"
+kind = "Lua"

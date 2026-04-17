@@ -136,22 +136,11 @@ void path_setup_lua_api(lua_State* L) {
     create_path_metatable(L);
 
     lua_getglobal(L, "rewsh");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        luaL_error(L, "global 'rewsh' does not exist or is not a table");
-        return;
-    }
-
+    lua_getfield(L, -1, "core");
     lua_getfield(L, -1, "api");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);        /* pop old api/nil */
-        lua_newtable(L);      /* create rewsh.api */
-        lua_pushvalue(L, -1); /* duplicate for setfield */
-        lua_setfield(L, -3, "api");
-    }
 
-    // rewsh.api.path
     create_path_module(L);
     lua_setfield(L, -2, "path");
-    lua_pop(L, 2);
+
+    lua_pop(L, 3);
 }

@@ -250,13 +250,10 @@ void state_setup_lua_api(lua_State* L) {
     create_state_vars_env_metatable(L);
 
     lua_getglobal(L, "rewsh");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        luaL_error(L, "global 'rewsh' does not exist or is not a table");
-        return;
-    }
 
     // "temporal" hacky api extensions
+    // shit is even more temporal than imagined
+    lua_getfield(L, -1, "core");
     lua_getfield(L, -1, "api");
     lua_pushcfunction(L, lua_set_raw_mode);
     lua_setfield(L, -2, "set_raw_mode");
@@ -279,6 +276,8 @@ void state_setup_lua_api(lua_State* L) {
     luaL_getmetatable(L, LUA_STATE_MT);
     lua_setmetatable(L, -2);
     lua_setfield(L, -2, "state");
+
+    lua_pop(L, 1);
 
     return;
 }

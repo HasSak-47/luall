@@ -38,8 +38,9 @@ void event_setup_lua_api(lua_State* L) {
         return;
     }
 
+    lua_getfield(L, -1, "core");
     lua_getfield(L, -1, "api");
     lua_pushcfunction(L, add_lua_event);
     lua_setfield(L, -2, "on_event");
-    lua_pop(L, 2);
+    lua_pop(L, 3);
 }

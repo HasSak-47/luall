@@ -5,15 +5,15 @@
 
 ---@class RewshPluginApi
 ---@field load fun(path: string): RewshCorePlugin
----
+
 ---@class RewshStateVarsUser
 ---@field home RewshPath
 ---@field name string
----
+
 ---@class RewshStateVars
 ---@field error integer
 ---@field debug boolean
----@field env { [string]: string }
+---@field env table<string, string>
 ---@field cwd RewshPath
 ---@field host string
 ---@field user RewshStateVarsUser
@@ -47,6 +47,8 @@
 
 ---@class RewshPipe
 ---@field close fun(self: RewshPipe)
+---@field read fun(self: RewshPipe): string
+---@field write fun(self: RewshPipe, data: string)
 
 ---@class RewshProcessApi
 ---@field command fun(path: string): RewshCommand
@@ -59,7 +61,33 @@
 
 ---@alias RewshInputKeyKind "none"|"letter"|"modifier"|"special"
 ---@alias RewshInputModifier "shift"|"alt"|"ctrl"
----@alias RewshInputSpecialKey "up" | "down" | "right" | "left" | "enter" | "tab" | "backspace" | "escape" | "delete" | "insert" | "home" | "end" | "page_up" | "page_down" | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
+---@alias RewshInputSpecialKey
+---| "up"
+---| "down"
+---| "right"
+---| "left"
+---| "enter"
+---| "tab"
+---| "backspace"
+---| "escape"
+---| "delete"
+---| "insert"
+---| "home"
+---| "end"
+---| "page_up"
+---| "page_down"
+---| "f1"
+---| "f2"
+---| "f3"
+---| "f4"
+---| "f5"
+---| "f6"
+---| "f7"
+---| "f8"
+---| "f9"
+---| "f10"
+---| "f11"
+---| "f12"
 
 ---@class RewshInputKey
 ---@field kind RewshInputKeyKind
@@ -72,21 +100,26 @@
 ---@field ctrl boolean
 
 ---@alias RewshEventName "key_input"|"enter"|"exit"
----@alias RewshOnEvent fun(event: "enter"|"exit", cb: fun()) | fun(event: "key_input", cb: fun(input: RewshInputKey))
+---@alias RewshOnEvent
+---| fun(event: "enter"|"exit", cb: fun())
+---| fun(event: "key_input", cb: fun(input: RewshInputKey))
 
----@class RewshApi
+---@class RewshCoreApi
 ---@field process RewshProcessApi
 ---@field path RewshPathApi
 ---@field on_event RewshOnEvent
----@field cwd fun(path: string|RewshPath): boolean|nil, string|nil
 ---@field cd fun(path: string|RewshPath): boolean|nil, string|nil
 ---@field set_raw_mode fun()
 ---@field unset_raw_mode fun()
 ---@field enter_alternate_screen fun()
 ---@field leave_alternate_screen fun()
 
+---@class RewshCore
+---@field api RewshCoreApi
+---@field state RewshState
+
 ---@class Rewsh
----@field api RewshApi
+---@field core RewshCore
 ---@field state RewshState
 ---@field plugin RewshPluginApi
 

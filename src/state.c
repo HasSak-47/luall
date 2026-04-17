@@ -327,6 +327,8 @@ void init_shell_state() {
     create_input_key_metatable(state.L);
     lua_newtable(state.L);
     init_plugin_table();
+    // NOTE: maybe rename to bootstrap
+    // since it is meant to be just used to load core lol
     lua_setfield(state.L, -2, "plugin");
     lua_pushlightuserdata(state.L, &state);
     lua_setfield(state.L, -2, "state");

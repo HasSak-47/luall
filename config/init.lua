@@ -1,7 +1,7 @@
-local core = rewsh.plugin.load("core://core_back")
+local core = rewsh.plugin.load("core://core")
 core:setup()
-local front = rewsh.plugin.load("core://core_front")
-front:setup()
+local api = rewsh.plugin.load("core://api")
+api:setup()
 
 local buffer = {
     write = function(self, data)
@@ -52,26 +52,29 @@ view.new = function(x, y)
 end
 
 
+local input_state = {
+    data = '',
+    index = 0
+}
 local function submit_input()
-    local line = rewsh.front.vars.input.data
+    local line = input_state.data
 
-    io.stdout:write("\r" .. rewsh.front.prompt() .. line .. "\n")
+    io.stdout:write("\r" .. rewsh.api.prompt() .. line .. "\n")
 
-    local ok, err = pcall(rewsh.front.api.parse, line)
+    local ok, err = pcall(rewsh.api.parser.parse, line)
     if not ok then
-        print(err)
+        print('failed to parse', err)
+        return
     end
 
-    rewsh.front.vars.input.data = ""
-    rewsh.front.vars.input.index = 0
+    input_state.data = ""
+    input_state.index = 0
 end
 
 
 ---@param input RewshInputKey
 ---@return nil
 local function handle_input(input)
-    local input_state = rewsh.front.vars.input
-
     if input.kind == "letter" then
         if input.letter == "c" and input.ctrl then
             rewsh.state.running = false
@@ -103,10 +106,12 @@ local function handle_input(input)
         end
     end
 
-    rewsh.front.render_input()
+    rewsh.api.render_input(input_state.data, input_state.index)
 end
 
 rewsh.api.on_event("enter", rewsh.api.set_raw_mode)
 rewsh.api.on_event("exit", rewsh.api.unset_raw_mode)
-rewsh.api.on_event("enter", rewsh.front.render_input)
+rewsh.api.on_event("enter", function()
+    rewsh.api.render_input(input_state.data, input_state.index)
+end)
 rewsh.api.on_event("key_input", handle_input)

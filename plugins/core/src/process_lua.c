@@ -8,8 +8,8 @@
 #include "ly_string.h"
 #include "process.h"
 
-#define LUA_COMMAND_MT "rewsh.api.process.command"
-#define LUA_PIPE_MT "rewsh.api.process.pipe"
+#define LUA_COMMAND_MT "rewsh.core.api.process.command"
+#define LUA_PIPE_MT "rewsh.core.api.process.pipe"
 
 static struct Command* check_command(lua_State* L, int idx) {
     return (struct Command*)luaL_checkudata(L, idx, LUA_COMMAND_MT);
@@ -250,30 +250,13 @@ void process_setup_lua_api(lua_State* L) {
     create_command_metatable(L);
     create_pipe_metatable(L);
 
-    /* stack: empty */
-
     lua_getglobal(L, "rewsh");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        luaL_error(L, "global 'rewsh' does not exist or is not a table");
-        return;
-    }
 
-    /* stack: rewsh */
-
+    lua_getfield(L, -1, "core");
     lua_getfield(L, -1, "api");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);        /* pop old api/nil */
-        lua_newtable(L);      /* create rewsh.api */
-        lua_pushvalue(L, -1); /* duplicate for setfield */
-        lua_setfield(L, -3, "api");
-    }
-
-    /* stack: rewsh, api */
 
     push_process_module(L);
     lua_setfield(L, -2, "process"); /* api.process = module */
 
-    /* stack: rewsh, api */
-    lua_pop(L, 2);
+    lua_pop(L, 3);
 }

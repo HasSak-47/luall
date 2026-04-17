@@ -15,7 +15,7 @@ local fd_set = setify_table({ "&0", "&1", "&2" })
 ---@param path string
 ---@return RewshPath
 local function expand_front_path(path)
-    return rewsh.front.inner.expand_path(path)
+    return rewsh.api.expand_path(path)
 end
 
 ---@class RewshFrontToken
@@ -148,7 +148,7 @@ local function resolve_command(name)
         return expand_front_path(name):to_string()
     end
 
-    local path_env = rewsh.state.vars.env.PATH
+    local path_env = rewsh.core.state.vars.env.PATH
     for _, path in ipairs(parse_env_path(path_env)) do
         local candidate = path .. "/" .. name
         local handle = io.open(candidate, "r")
@@ -170,11 +170,6 @@ local function build_command(process)
         table.insert(args, token.val)
     end
 
-    local alias = rewsh.front.alias[name]
-    if alias ~= nil then
-        name, args = alias(args)
-    end
-
     return name, args
 end
 
@@ -192,7 +187,7 @@ local function run_external(name, args)
 
     command:run()
     local status = command:wait()
-    rewsh.state.vars.error = status
+    rewsh.vars.error = status
 end
 
 ---@param process RewshFrontProcess
@@ -200,27 +195,15 @@ end
 local function run_cmd(process)
     local name, args = build_command(process)
 
-    if rewsh.front.extend[name] ~= nil then
-        rewsh.front.extend[name](args)
-        rewsh.state.vars.error = 0
-        return
-    end
-
-    if rewsh.front.util[name] ~= nil then
-        rewsh.front.util[name](args)
-        rewsh.state.vars.error = 0
-        return
-    end
-
     if name == "exit" then
-        rewsh.state.running = false
-        rewsh.state.vars.error = 0
+        rewsh.core.state.running = false
+        rewsh.core.state.vars.error = 0
         return
     end
 
     if name == "reload" then
-        rewsh.state.reload = true
-        rewsh.state.vars.error = 0
+        rewsh.core.state.reload = true
+        rewsh.core.state.vars.error = 0
         return
     end
 
@@ -277,7 +260,7 @@ end
 local function handle_singleline(line)
     local start = line:find("lua", 1, true)
     if start == 1 then
-        rewsh.front.util.lua({ line:gsub("^lua%s*", "", 1) })
+        rewsh.api.lua({ line:gsub("^lua%s*", "", 1) })
     else
         handle_shell_like(line)
     end
@@ -291,7 +274,7 @@ local function parse(input)
         return
     end
 
-    table.insert(rewsh.front.vars.history, input)
+    table.insert(rewsh.vars.history, input)
 
     local set_debug = input:sub(1, 1) == "!"
     if set_debug then
