@@ -161,6 +161,26 @@ int plugin_load(lua_State* L) {
         lua_pushcfunction(L, c_plugin_setup);
         lua_setfield(L, -2, "setup");
     } break;
+    case PLUGIN_KIND_BINARY: {
+        struct PluginHandler handler = load_binary_plugin(L, p);
+        if (!handler.binary.handler || !handler.binary.setup ||
+            !handler.binary.destruct) {
+            return luaL_error(L,
+                "failed to load c plugin '%s' (compilation/linking error)",
+                path);
+        }
+        debug_printf("loading c plugin into the internal state\n", path);
+        vector_push(state.plugins, handler);
+        struct PluginHandler* ptr = &state.plugins.data[state.plugins.len - 1];
+
+        debug_printf(
+            "building lua plugin handler with lightuserdata %p\n", ptr);
+        lua_createtable(L, 0, 0);
+        lua_pushlightuserdata(L, ptr);
+        lua_setfield(L, -2, "handler");
+        lua_pushcfunction(L, c_plugin_setup);
+        lua_setfield(L, -2, "setup");
+    }
     case PLUGIN_KIND_LUA: {
         struct PluginHandler handler = {
             .plugin = p,

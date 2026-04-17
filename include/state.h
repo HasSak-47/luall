@@ -35,6 +35,12 @@ struct PluginHandler {
         } c;
 
         struct {
+            void* handler;
+            SetupFunction setup;
+            DestructFunction destruct;
+        } binary;
+
+        struct {
             int setup_reference;
             int destruct_reference;
         } lua;

@@ -13,6 +13,7 @@
 
 typedef enum PluginKind {
   PLUGIN_KIND_LUA,
+  PLUGIN_KIND_BINARY,
   PLUGIN_KIND_C,
 } PluginKind;
 

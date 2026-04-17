@@ -1,11 +1,11 @@
 #include <dirent.h>
 #include <dlfcn.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <debug.h>
 #include <ly_string.h>
@@ -122,13 +122,38 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
     }
 
     path_destruct(&path);
-    handler.c.handler  = dlopen(argv[args.len - 1], RTLD_LAZY);
+    handler.c.handler = dlopen(argv[args.len - 1], RTLD_LAZY);
     if (!handler.c.handler) {
         printf("failed to load plugin shared object: %s\n", dlerror());
         return handler;
     }
     handler.c.setup    = dlsym(handler.c.handler, "plugin_setup");
     handler.c.destruct = dlsym(handler.c.handler, "plugin_destruct");
+
+    return handler;
+}
+
+struct PluginHandler load_binary_plugin(lua_State* L, struct Plugin* p) {
+    struct PluginHandler handler = {};
+    handler.plugin               = p;
+    char* path_str               = plugin_get_path(handler.plugin);
+    char* name_str               = plugin_get_name(handler.plugin);
+
+    debug_printf("loading binary plugin %s @ %s\n", name_str, path_str);
+
+    size_t len        = strlen(path_str) + strlen(name_str);
+    char* binary_path = malloc(len);
+    snprintf(binary_path, len, "%s/%s", path_str, name_str);
+
+    handler.binary.handler = dlopen(binary_path, RTLD_LAZY);
+    if (!handler.c.handler) {
+        printf("failed to load plugin shared object: %s\n", dlerror());
+        return handler;
+    }
+    handler.binary.setup    = dlsym(handler.binary.handler, "plugin_setup");
+    handler.binary.destruct = dlsym(handler.binary.handler, "plugin_destruct");
+
+    free(binary_path);
 
     return handler;
 }

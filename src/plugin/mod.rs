@@ -19,6 +19,7 @@ use crate::plugin::version::Version;
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
 pub enum PluginKind {
     Lua,
+    BINARY,
     #[default]
     C,
 }
