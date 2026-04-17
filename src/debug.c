@@ -27,7 +27,7 @@ void debug_printf(const char* fmt, ...) {
 extern const struct TestDesc __start_ly_test[];
 extern const struct TestDesc __stop_ly_test[];
 
-DefineVector(VectorTestDesc, struct TestDesc*);
+DefineVector(VectorTestDesc, const struct TestDesc*);
 
 void test_handler(const int argc, const char** argv) {
     const struct TestDesc* begin = __start_ly_test;
@@ -50,7 +50,7 @@ void test_handler(const int argc, const char** argv) {
     }
     printf("failed tests\n");
     for (size_t i = 0; i < failed_tests.len; ++i) {
-        struct TestDesc* fail = failed_tests.data[i];
+        const struct TestDesc* fail = failed_tests.data[i];
         printf("failed test: %s\n", fail->name);
     }
 }
