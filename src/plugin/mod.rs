@@ -51,7 +51,7 @@ pub struct ManifestHeader {
     pub src: Option<String>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Dependency {
     pub name: String,
     pub version: Option<Version>,
@@ -221,7 +221,12 @@ impl PluginManager {
             self.resolve(&name)?;
         }
 
+        for depen in self.plugins[name].manifest.dependecies.clone() {
+            self.load_plugin(&depen.source.unwrap())?;
+        }
+
         let data = &mut self.plugins.get_mut(name).unwrap();
+
         let mut handler = std::mem::take(&mut data.handler);
         handler.load_plugin(data)?;
         data.handler = handler;

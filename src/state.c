@@ -361,18 +361,14 @@ static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
     size_t base_len             = strlen(plugin_path);
     const char* lua_suffix      = "/lua/?.lua";
     const char* lua_init_suffix = "/lua/?/init.lua";
-    const char* so_suffix       = "/?.so";
 
     char* lua_path      = malloc(base_len + strlen(lua_suffix) + 1);
     char* lua_init_path = malloc(base_len + strlen(lua_init_suffix) + 1);
-    char* c_path        = malloc(base_len + strlen(so_suffix) + 1);
 
     snprintf(lua_path, base_len + strlen(lua_suffix) + 1, "%s%s", plugin_path,
         lua_suffix);
     snprintf(lua_init_path, base_len + strlen(lua_init_suffix) + 1, "%s%s",
         plugin_path, lua_init_suffix);
-    snprintf(c_path, base_len + strlen(so_suffix) + 1, "%s%s", plugin_path,
-        so_suffix);
 
     int status =
         register_plugin_namespace_searcher(L, plugin_name, plugin_path);
@@ -382,22 +378,31 @@ static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
     if (status == 0) {
         status = package_append_path(L, "path", lua_path);
     }
-    if (status == 0) {
-        status = package_append_path(L, "cpath", c_path);
-    }
 
     free(plugin_name);
     free(lua_path);
     free(lua_init_path);
-    free(c_path);
     return status;
 }
 
 static int lua_plugin_api_require(lua_State* L) {
     const char* path = lua_tostring(L, 1);
     if (!manager_is_plugin_loaded(state.manager, path)) {
+        debug_printf("loading plugin %s\n", path);
         manager_load_plugin(state.manager, path);
     }
+
+    const CIteratorString* iter =
+        get_plugin_dependecies_iterator(state.manager, path);
+
+    debug_printf("dependecies:...\n");
+    const char* next = NULL;
+    while ((next = next_plugin_name(iter)) != NULL) {
+        lua_pushcfunction(L, lua_plugin_api_require);
+        lua_pushstring(L, next);
+        lua_call(L, 1, 1);
+    }
+
     struct PluginData* d    = get_plugin(state.manager, path);
     struct PluginHandler* h = get_plugin_handler(d);
 
@@ -511,10 +516,6 @@ void init_plugin_table() {
 
     lua_pushcfunction(state.L, lua_plugin_api_destroy);
     lua_setfield(state.L, -2, "destroy");
-
-    /* plugins.__index = plugins (for method lookup) */
-    lua_pushvalue(state.L, -1);
-    lua_setfield(state.L, -2, "__index");
 }
 
 /**

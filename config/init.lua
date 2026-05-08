@@ -1,4 +1,3 @@
-local core = rewsh.plugin.require("core://core")
 local api = rewsh.plugin.require("core://api")
 
 local buffer = {

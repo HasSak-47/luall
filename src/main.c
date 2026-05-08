@@ -18,7 +18,7 @@ int main(const int argc, const char* argv[]) {
 #ifdef LY_TEST
     test_handler(argc, argv);
     return 0;
-#endif
+#else
 
     struct Args* args  = NULL;
     const char* script = NULL;
@@ -63,4 +63,5 @@ int main(const int argc, const char* argv[]) {
     trigger_exit_hook();
     end_shell_state();
     return 0;
+#endif
 }

@@ -1,4 +1,4 @@
-local parser = require("parser")
+local parser = require("api.parser")
 
 ---@return string
 local function home_string()

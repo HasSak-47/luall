@@ -3,3 +3,7 @@ name = "extension"
 version = "0.1.0"
 edition = "0.1.0"
 kind = "Lua"
+
+[[dependecies]]
+name = "core"
+source = "core://core"

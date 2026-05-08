@@ -181,6 +181,31 @@ pub extern "C" fn next_plugin_name(iter: *const CIteratorString) -> *const c_cha
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
+pub extern "C" fn get_plugin_dependecies_iterator(
+    manager: *mut PluginManager,
+    path: *const c_char,
+) -> *const CIteratorString {
+    let cstring = unsafe { CStr::from_ptr(path) };
+    let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
+
+    let plugin = unsafe { (&*manager) }.plugins.get(&path).unwrap();
+    let plugins = plugin
+        .manifest
+        .dependecies
+        .iter()
+        .map(|depend| depend.source.as_ref().unwrap())
+        .map(url::Url::as_str)
+        .map(CString::new)
+        .map(Result::unwrap)
+        .map(CString::into_raw);
+
+    return Box::into_raw(Box::new(CIterator {
+        i: Box::into_raw(Box::new(plugins)) as *mut _,
+    })) as *const _;
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
 pub extern "C" fn get_plugin_iterator(manager: *mut PluginManager) -> *const CIteratorString {
     let plugins = unsafe { (&*manager).get_loaded_plugins() }
         .into_iter()

@@ -37,6 +37,9 @@ void free_args(struct Args *args);
 struct PluginData *get_plugin(struct PluginManager *manager_ptr,
                               const char *path);
 
+const CIteratorString *get_plugin_dependecies_iterator(struct PluginManager *manager,
+                                                       const char *path);
+
 struct PluginHandler *get_plugin_handler(struct PluginData *plugin);
 
 const CIteratorString *get_plugin_iterator(struct PluginManager *manager);
