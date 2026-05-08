@@ -1,10 +1,15 @@
 ---@meta
 
----@class RewshCorePlugin
----@field setup fun(self: RewshCorePlugin)
+---@class RewshPluginData
+
+---@class RewshPluginExports: table
 
 ---@class RewshPluginApi
----@field load fun(path: string): RewshCorePlugin
+---@field resolve fun(url: string): RewshPluginData|nil
+---@field load fun(url: string): RewshPluginData|nil
+---@field setup fun(url: string, opts: table|nil): RewshPluginData|nil
+---@field require fun(url: string, opts: table|nil): RewshPluginExports
+---@field destroy fun(url: string): nil
 
 ---@class RewshStateVarsUser
 ---@field home RewshPath
@@ -61,33 +66,7 @@
 
 ---@alias RewshInputKeyKind "none"|"letter"|"modifier"|"special"
 ---@alias RewshInputModifier "shift"|"alt"|"ctrl"
----@alias RewshInputSpecialKey
----| "up"
----| "down"
----| "right"
----| "left"
----| "enter"
----| "tab"
----| "backspace"
----| "escape"
----| "delete"
----| "insert"
----| "home"
----| "end"
----| "page_up"
----| "page_down"
----| "f1"
----| "f2"
----| "f3"
----| "f4"
----| "f5"
----| "f6"
----| "f7"
----| "f8"
----| "f9"
----| "f10"
----| "f11"
----| "f12"
+---@alias RewshInputSpecialKey "up" | "down" | "right" | "left" | "enter" | "tab" | "backspace" | "escape" | "delete" | "insert" | "home" | "end" | "page_up" | "page_down" | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
 
 ---@class RewshInputKey
 ---@field kind RewshInputKeyKind
@@ -100,9 +79,7 @@
 ---@field ctrl boolean
 
 ---@alias RewshEventName "key_input"|"enter"|"exit"
----@alias RewshOnEvent
----| fun(event: "enter"|"exit", cb: fun())
----| fun(event: "key_input", cb: fun(input: RewshInputKey))
+---@alias RewshOnEvent  fun(event: "enter"|"exit", cb: fun()) | fun(event: "key_input", cb: fun(input: RewshInputKey))
 
 ---@class RewshCoreApi
 ---@field process RewshProcessApi

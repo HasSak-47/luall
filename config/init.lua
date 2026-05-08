@@ -1,4 +1,4 @@
-local api = rewsh.plugin.require("core://api")
+rewsh.plugin.require("core://api")
 
 local buffer = {
     write = function(self, data)
@@ -36,7 +36,6 @@ view.new = function(x, y)
         y = 1
     end
 
-
     local v = {
         x = x,
         y = y,
@@ -53,6 +52,7 @@ local input_state = {
     data = '',
     index = 0
 }
+
 local function submit_input()
     local line = input_state.data
 
