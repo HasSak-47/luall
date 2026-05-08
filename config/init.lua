@@ -1,7 +1,5 @@
-local core = rewsh.plugin.load("core://core")
-core:setup()
-local api = rewsh.plugin.load("core://api")
-api:setup()
+local core = rewsh.plugin.require("core://core")
+local api = rewsh.plugin.require("core://api")
 
 local buffer = {
     write = function(self, data)

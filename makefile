@@ -61,6 +61,7 @@ run: build
 test: CFLAGS += -DLY_TEST
 test: clean build
 	./$(OUT)
+	cargo test
 
 clean:
 	rm -f $(OBJS)

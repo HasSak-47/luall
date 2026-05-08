@@ -43,11 +43,10 @@ const char* flags[] = {
     "-Iinclude/", "-Wall", "-I/usr/include/lua5.4", "-g", "-fpic", "-shared"};
 
 // WARNING: THIS IS FULL OF MEMORY LEAKS FIX IN THE FUTURE!!
-struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
-    struct PluginHandler handler = {};
-    handler.plugin               = p;
-    char* path_str               = plugin_get_path(handler.plugin);
-    char* name_str               = plugin_get_name(handler.plugin);
+static void complile_c_plugin(const struct PluginData* data) {
+    char* path_str  = plugin_get_data_path(data);
+    char* cache_str = plugin_get_cache_path(data);
+    char* name_str  = plugin_get_name(data);
 
     debug_printf("loading c plugin %s @ %s\n", name_str, path_str);
 
@@ -85,14 +84,9 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
         free(path_str);
     }
 
-    debug_printf("generating cache location\n");
-    struct Path cache_path = path_clone(&state.config.cache);
-    path_push_name(&cache_path, name_str);
-    char* plugin_cache_path = path_get_string(cache_path);
-
     debug_printf("generating compiler output path\n");
     vector_push(args, string_from_cstr("-o"));
-    vector_push(args, string_from_cstr(plugin_cache_path));
+    vector_push(args, string_from_cstr(cache_str));
 
     debug_printf("generating argv\n");
     char** argv = malloc(sizeof(char*) * (args.len + 1));
@@ -117,43 +111,52 @@ struct PluginHandler load_c_plugin(lua_State* L, struct Plugin* p) {
         debug_printf("compilation_status %s\n", compiled ? "ok" : "err");
         if (!compiled) {
             printf("plugin compilation failed, refusing to run\n");
-            return handler;
         }
     }
 
     path_destruct(&path);
-    handler.c.handler = dlopen(argv[args.len - 1], RTLD_LAZY);
-    if (!handler.c.handler) {
-        printf("failed to load plugin shared object: %s\n", dlerror());
-        return handler;
-    }
-    handler.c.setup    = dlsym(handler.c.handler, "plugin_setup");
-    handler.c.destruct = dlsym(handler.c.handler, "plugin_destruct");
+
+    char* bin_path = malloc(strlen(argv[args.len - 1]));
+    strcpy(bin_path, argv[args.len - 1]);
+    free(argv);
+}
+
+static struct PluginHandler _load_binary_plugin(const char* path) {
+    struct PluginHandler handler = {};
+    handler.handler              = dlopen(path, RTLD_LAZY);
+    handler.setup                = dlsym(handler.handler, "plugin_setup");
+    handler.destruct             = dlsym(handler.handler, "plugin_destruct");
 
     return handler;
 }
 
-struct PluginHandler load_binary_plugin(lua_State* L, struct Plugin* p) {
-    struct PluginHandler handler = {};
-    handler.plugin               = p;
-    char* path_str               = plugin_get_path(handler.plugin);
-    char* name_str               = plugin_get_name(handler.plugin);
+struct PluginHandler load_binary_plugin(const struct PluginData* p) {
+    struct PluginHandler c = _load_binary_plugin(plugin_get_cache_path(p));
+    c.kind                 = PLUGIN_KIND_BINARY;
+    return c;
+}
 
-    debug_printf("loading binary plugin %s @ %s\n", name_str, path_str);
+struct PluginHandler load_c_plugin(const struct PluginData* p) {
+    complile_c_plugin(p);
+    struct PluginHandler c = _load_binary_plugin(plugin_get_cache_path(p));
+    c.kind                 = PLUGIN_KIND_C;
 
-    size_t len        = strlen(path_str) + strlen(name_str);
-    char* binary_path = malloc(len);
-    snprintf(binary_path, len, "%s/%s", path_str, name_str);
+    return c;
+}
 
-    handler.binary.handler = dlopen(binary_path, RTLD_LAZY);
-    if (!handler.c.handler) {
-        printf("failed to load plugin shared object: %s\n", dlerror());
-        return handler;
-    }
-    handler.binary.setup    = dlsym(handler.binary.handler, "plugin_setup");
-    handler.binary.destruct = dlsym(handler.binary.handler, "plugin_destruct");
+struct PluginHandler load_lua_plugin(const struct PluginData* p) {
+    return (struct PluginHandler){
+        .kind = PLUGIN_KIND_LUA, .lua_path = plugin_get_data_path(p)};
+}
 
-    free(binary_path);
+void unload_binary_plugin(lua_State* state, struct PluginHandler* p) {
+    dlclose(p->handler);
+}
 
-    return handler;
+void unload_c_plugin(lua_State* state, struct PluginHandler* p) {
+    dlclose(p->handler);
+}
+
+void unload_lua_plugin(lua_State* state, struct PluginHandler* p) {
+    // TODO: call destructor or something...
 }

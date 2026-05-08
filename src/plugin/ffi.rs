@@ -3,11 +3,11 @@ use std::{
     ptr,
 };
 
-use crate::plugin::{Plugin, PluginKind, PluginManager};
+use crate::plugin::{PluginData, PluginHandler, PluginKind, PluginManager, raw_bindings as rb};
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn plugin_get_name(plugin: *mut Plugin) -> *mut c_char {
+pub extern "C" fn plugin_get_name(plugin: *const PluginData) -> *mut c_char {
     let plugin = unsafe { &*plugin };
 
     let s = CString::new(plugin.manifest.plugin.name.as_str()).unwrap();
@@ -17,7 +17,17 @@ pub extern "C" fn plugin_get_name(plugin: *mut Plugin) -> *mut c_char {
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn plugin_get_path(plugin: *mut Plugin) -> *mut c_char {
+pub extern "C" fn plugin_get_cache_path(plugin: *const PluginData) -> *mut c_char {
+    let plugin = unsafe { &*plugin };
+
+    let s = CString::new(plugin.cache_location.to_str().unwrap()).unwrap();
+
+    return s.into_raw();
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn plugin_get_data_path(plugin: *const PluginData) -> *mut c_char {
     let plugin = unsafe { &*plugin };
 
     let s = CString::new(plugin.data_location.to_str().unwrap()).unwrap();
@@ -39,41 +49,60 @@ pub extern "C" fn new_plugin_manager() -> *mut PluginManager {
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn add_or_get_plugin(
+pub extern "C" fn manager_resolve_plugin(
     manager_ptr: *mut PluginManager,
     path: *const c_char,
-) -> *const Plugin {
-    let manager = unsafe { &mut (*manager_ptr) };
-    let cstring = unsafe { CStr::from_ptr(path) };
-
-    let path = cstring.to_str().unwrap();
-
-    let plugin = manager.add_plugin(&url::Url::parse(&path.to_string()).unwrap());
-    if plugin.is_err() {
-        return ptr::null();
-    }
-
-    return (plugin.unwrap()) as *mut Plugin;
-}
-
-#[allow(unused)]
-#[unsafe(no_mangle)]
-pub extern "C" fn add_plugin(manager_ptr: *mut PluginManager, path: *const c_char) -> *mut Plugin {
+) -> *mut PluginData {
     let manager = unsafe { &mut (*manager_ptr) };
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
 
-    let plugin = manager.add_plugin(&path);
+    let plugin = manager.resolve(&path);
     if plugin.is_err() {
         return ptr::null_mut();
     }
 
-    return (plugin.unwrap()) as *mut Plugin;
+    return (plugin.unwrap()) as *mut PluginData;
 }
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn get_plugin(manager_ptr: *mut PluginManager, path: *const c_char) -> *mut Plugin {
+pub extern "C" fn manager_unload_plugin(
+    lua: *mut super::bindings::lua_State,
+    manager_ptr: *mut PluginManager,
+    path: *const c_char,
+) -> i32 {
+    let manager = unsafe { &mut (*manager_ptr) };
+    let cstring = unsafe { CStr::from_ptr(path) };
+    let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
+
+    if manager.destroy_plugin(&path, lua).is_err() {
+        return -1;
+    }
+
+    return 0;
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn manager_load_plugin(manager_ptr: *mut PluginManager, path: *const c_char) -> i32 {
+    let manager = unsafe { &mut (*manager_ptr) };
+    let cstring = unsafe { CStr::from_ptr(path) };
+    let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
+
+    if manager.load_plugin(&path).is_err() {
+        return -1;
+    }
+
+    return 0;
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn get_plugin(
+    manager_ptr: *mut PluginManager,
+    path: *const c_char,
+) -> *mut PluginData {
     let manager = unsafe { &mut (*manager_ptr) };
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
@@ -83,12 +112,15 @@ pub extern "C" fn get_plugin(manager_ptr: *mut PluginManager, path: *const c_cha
         return ptr::null_mut();
     }
 
-    return (plugin.unwrap()) as *mut Plugin;
+    return (plugin.unwrap()) as *mut PluginData;
 }
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn is_plugin_loaded(manager_ptr: *mut PluginManager, path: *const c_char) -> c_char {
+pub extern "C" fn manager_is_plugin_loaded(
+    manager_ptr: *mut PluginManager,
+    path: *const c_char,
+) -> c_char {
     let manager = unsafe { &mut (*manager_ptr) };
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
@@ -98,19 +130,66 @@ pub extern "C" fn is_plugin_loaded(manager_ptr: *mut PluginManager, path: *const
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn mark_plugin_as_loaded(
-    manager_ptr: *mut PluginManager,
-    path: *const c_char,
-) -> c_char {
-    let manager = unsafe { &mut (*manager_ptr) };
-    let cstring = unsafe { CStr::from_ptr(path) };
-    let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
-
-    return manager.mark_plugin_as_loaded(&path) as c_char;
+pub extern "C" fn plugin_get_kind(plugin: *mut PluginData) -> PluginKind {
+    return unsafe { &*plugin }.manifest.plugin.kind.clone();
 }
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn plugin_get_kind(plugin: *mut Plugin) -> PluginKind {
-    return unsafe { &*plugin }.manifest.plugin.kind.clone();
+pub extern "C" fn plugin_get_url(plugin: *mut PluginData) -> *mut c_char {
+    let cstr = CString::new(unsafe { &*plugin }.location.as_str()).unwrap();
+    return cstr.into_raw();
+}
+
+#[allow(unused)]
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+pub struct CIterator<T> {
+    i: *mut dyn std::iter::Iterator<Item = T>,
+}
+
+fn _next_item<T>(iter: *const CIterator<*const T>) -> *const T {
+    let iterator = unsafe { &mut *(*iter).i };
+
+    if let Some(n) = iterator.next() {
+        return n;
+    } else {
+        return std::ptr::null();
+    }
+}
+
+pub type CIteratorString = CIterator<*const c_char>;
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn get_plugin_handler(plugin: *mut PluginData) -> *mut PluginHandler {
+    let p = unsafe { &mut *plugin };
+
+    if let Some(h) = &mut p.handler.handler {
+        return (h as *mut rb::PluginHandler).cast();
+    }
+    return {
+        return std::ptr::null_mut();
+    };
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn next_plugin_name(iter: *const CIteratorString) -> *const c_char {
+    return _next_item(iter);
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn get_plugin_iterator(manager: *mut PluginManager) -> *const CIteratorString {
+    let plugins = unsafe { (&*manager).get_loaded_plugins() }
+        .into_iter()
+        .map(url::Url::as_str)
+        .map(CString::new)
+        .map(Result::unwrap)
+        .map(CString::into_raw);
+
+    return Box::into_raw(Box::new(CIterator {
+        i: Box::into_raw(Box::new(plugins)) as *mut _,
+    })) as *const _;
 }

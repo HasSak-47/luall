@@ -20,34 +20,7 @@
 #include "bindgen.h"
 #include "input_key.h"
 #include "path.h"
-#include "plugin/definitions.h"
-
-typedef typeof(plugin_setup)* SetupFunction;
-typedef typeof(plugin_destruct)* DestructFunction;
-
-struct PluginHandler {
-    struct Plugin* plugin;
-    union {
-        struct {
-            void* handler;
-            SetupFunction setup;
-            DestructFunction destruct;
-        } c;
-
-        struct {
-            void* handler;
-            SetupFunction setup;
-            DestructFunction destruct;
-        } binary;
-
-        struct {
-            int setup_reference;
-            int destruct_reference;
-        } lua;
-    };
-};
-
-DefineVector(VectorPluginHandler, struct PluginHandler);
+#include "plugin.h"
 
 // Luall.vars
 struct User {
@@ -89,7 +62,6 @@ struct ShellState {
     struct VectorHook hooks;
 
     struct PluginManager* manager;
-    struct VectorPluginHandler plugins;
     bool running;
     bool reload;
     lua_State* L;

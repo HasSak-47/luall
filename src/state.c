@@ -4,7 +4,6 @@
 #include <bindgen.h>
 #include <debug.h>
 #include <path.h>
-#include <plugin/loaders.h>
 #include <state.h>
 
 #include <stdio.h>
@@ -50,209 +49,6 @@ void init_shell_config() {
     path_expand(&state.config.plugins, &state.vars.cwd);
     path_expand(&state.config.config, &state.vars.cwd);
     path_expand(&state.config.cache, &state.vars.cwd);
-}
-
-int c_plugin_setup(lua_State* L) {
-    lua_getfield(L, -1, "handler");
-    struct PluginHandler* handler = lua_touserdata(L, -1);
-
-    return handler->c.setup(L);
-}
-
-int lua_plugin_setup(lua_State* L) {
-    lua_getfield(L, 1, "handler");
-    struct PluginHandler* handler = lua_touserdata(L, -1);
-    lua_pop(L, 1);
-
-    if (!handler || handler->lua.setup_reference == LUA_NOREF) {
-        return 0;
-    }
-
-    lua_rawgeti(L, LUA_REGISTRYINDEX, handler->lua.setup_reference);
-    lua_pushvalue(L, 1);
-    if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
-        return lua_error(L);
-    }
-
-    return 0;
-}
-
-static int package_prepend_path(
-    lua_State* L, const char* field, const char* entry) {
-    lua_getglobal(L, "package");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        return luaL_error(L, "package table is not available");
-    }
-
-    lua_getfield(L, -1, field);
-    const char* current = lua_tostring(L, -1);
-    if (current && strstr(current, entry) != NULL) {
-        lua_pop(L, 2);
-        return 0;
-    }
-
-    lua_pushfstring(L, "%s;%s", entry, current ? current : "");
-    lua_setfield(L, -3, field);
-    lua_pop(L, 2);
-    return 0;
-}
-
-static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
-    size_t base_len             = strlen(plugin_path);
-    const char* lua_suffix      = "/lua/?.lua";
-    const char* lua_init_suffix = "/lua/?/init.lua";
-    const char* c_suffix        = "/?.so";
-
-    char* lua_path      = malloc(base_len + strlen(lua_suffix) + 1);
-    char* lua_init_path = malloc(base_len + strlen(lua_init_suffix) + 1);
-    char* c_path        = malloc(base_len + strlen(c_suffix) + 1);
-
-    snprintf(lua_path, base_len + strlen(lua_suffix) + 1, "%s%s", plugin_path,
-        lua_suffix);
-    snprintf(lua_init_path, base_len + strlen(lua_init_suffix) + 1, "%s%s",
-        plugin_path, lua_init_suffix);
-    snprintf(
-        c_path, base_len + strlen(c_suffix) + 1, "%s%s", plugin_path, c_suffix);
-
-    int status = package_prepend_path(L, "path", lua_init_path);
-    if (status == 0) {
-        status = package_prepend_path(L, "path", lua_path);
-    }
-    if (status == 0) {
-        status = package_prepend_path(L, "cpath", c_path);
-    }
-
-    free(lua_path);
-    free(lua_init_path);
-    free(c_path);
-    return status;
-}
-
-int plugin_load(lua_State* L) {
-    debug_printf("loading plugin...\n");
-    const char* path = lua_tostring(L, -1);
-    struct Plugin* p = add_plugin(state.manager, path);
-    if (p == NULL) {
-        debug_printf("failed to load plugin: %s\n", path);
-        exit(-1);
-        return 0;
-    }
-    enum PluginKind kind = plugin_get_kind(p);
-    debug_printf("loading plugin @ %s\n", path);
-
-    switch (kind) {
-    case PLUGIN_KIND_C: {
-        struct PluginHandler handler = load_c_plugin(L, p);
-        if (!handler.c.handler || !handler.c.setup || !handler.c.destruct) {
-            return luaL_error(L,
-                "failed to load c plugin '%s' (compilation/linking error)",
-                path);
-        }
-        debug_printf("loading c plugin into the internal state\n", path);
-        vector_push(state.plugins, handler);
-        struct PluginHandler* ptr = &state.plugins.data[state.plugins.len - 1];
-
-        debug_printf(
-            "building lua plugin handler with lightuserdata %p\n", ptr);
-        lua_createtable(L, 0, 0);
-        lua_pushlightuserdata(L, ptr);
-        lua_setfield(L, -2, "handler");
-        lua_pushcfunction(L, c_plugin_setup);
-        lua_setfield(L, -2, "setup");
-    } break;
-    case PLUGIN_KIND_BINARY: {
-        struct PluginHandler handler = load_binary_plugin(L, p);
-        if (!handler.binary.handler || !handler.binary.setup ||
-            !handler.binary.destruct) {
-            return luaL_error(L,
-                "failed to load c plugin '%s' (compilation/linking error)",
-                path);
-        }
-        debug_printf("loading c plugin into the internal state\n", path);
-        vector_push(state.plugins, handler);
-        struct PluginHandler* ptr = &state.plugins.data[state.plugins.len - 1];
-
-        debug_printf(
-            "building lua plugin handler with lightuserdata %p\n", ptr);
-        lua_createtable(L, 0, 0);
-        lua_pushlightuserdata(L, ptr);
-        lua_setfield(L, -2, "handler");
-        lua_pushcfunction(L, c_plugin_setup);
-        lua_setfield(L, -2, "setup");
-    }
-    case PLUGIN_KIND_LUA: {
-        struct PluginHandler handler = {
-            .plugin = p,
-            .lua    = {
-                       .setup_reference = LUA_NOREF, .destruct_reference = LUA_NOREF}
-        };
-        char* plugin_path_str = plugin_get_path(p);
-        if (register_plugin_module_paths(L, plugin_path_str) != 0) {
-            free(plugin_path_str);
-            return lua_error(L);
-        }
-        const char* plugin_init = "init.lua";
-        size_t script_path_len =
-            strlen(plugin_path_str) + strlen(plugin_init) + 2;
-        char* script_path = malloc(script_path_len);
-        snprintf(script_path, script_path_len, "%s/%s", plugin_path_str,
-            plugin_init);
-        if (luaL_loadfile(L, script_path) != LUA_OK) {
-            free(plugin_path_str);
-            free(script_path);
-            return lua_error(L);
-        }
-
-        if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
-            free(plugin_path_str);
-            free(script_path);
-            return lua_error(L);
-        }
-
-        if (!lua_istable(L, -1)) {
-            free(plugin_path_str);
-            free(script_path);
-            return luaL_error(L,
-                "failed to load lua plugin '%s': entrypoint must return a table",
-                path);
-        }
-
-        lua_getfield(L, -1, "setup");
-        if (lua_isfunction(L, -1)) {
-            handler.lua.setup_reference = luaL_ref(L, LUA_REGISTRYINDEX);
-        }
-        else {
-            lua_pop(L, 1);
-        }
-
-        lua_getfield(L, -1, "destruct");
-        if (lua_isfunction(L, -1)) {
-            handler.lua.destruct_reference = luaL_ref(L, LUA_REGISTRYINDEX);
-        }
-        else {
-            lua_pop(L, 1);
-        }
-
-        lua_pop(L, 1);
-
-        vector_push(state.plugins, handler);
-        struct PluginHandler* ptr = &state.plugins.data[state.plugins.len - 1];
-
-        lua_createtable(L, 0, 0);
-        lua_pushlightuserdata(L, ptr);
-        lua_setfield(L, -2, "handler");
-        lua_pushcfunction(L, lua_plugin_setup);
-        lua_setfield(L, -2, "setup");
-
-        free(plugin_path_str);
-        free(script_path);
-    } break;
-    default:
-        return 0;
-    }
-
-    return 1;
 }
 
 int empty_plugin_setup(lua_State* L) {
@@ -322,16 +118,399 @@ void trigger_input_hook(struct InputKey key) {
     }
 }
 
+static int lua_plugin_api_resolve(lua_State* L) {
+    const char* path = lua_tostring(L, 1);
+    manager_resolve_plugin(state.manager, path);
+    return 0;
+}
+
+static int lua_plugin_api_load(lua_State* L) {
+    const char* path = lua_tostring(L, 1);
+    manager_load_plugin(state.manager, path);
+    return 0;
+}
+
+static int lua_plugin_api_setup(lua_State* L) {
+    const char* path = lua_tostring(L, 1);
+    if (!manager_is_plugin_loaded(state.manager, path)) {
+        manager_load_plugin(state.manager, path);
+    }
+    struct PluginData* d     = get_plugin(state.manager, path);
+    struct PluginHandler* h  = get_plugin_handler(d);
+    h->setup_table_reference = luaL_ref(L, LUA_REGISTRYINDEX);
+
+    return 0;
+}
+
+static int package_append_path(
+    lua_State* L, const char* field, const char* entry) {
+    lua_getglobal(L, "package");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return luaL_error(L, "package table is not available");
+    }
+
+    lua_getfield(L, -1, field);
+    const char* current = lua_tostring(L, -1);
+    if (current && strstr(current, entry) != NULL) {
+        lua_pop(L, 2);
+        return 0;
+    }
+
+    lua_pushfstring(L, "%s%s%s", current ? current : "",
+        current && current[0] ? ";" : "", entry);
+    lua_setfield(L, -3, field);
+    lua_pop(L, 2);
+    return 0;
+}
+
+static char* plugin_namespace_from_path(const char* plugin_path) {
+    const char* name = strrchr(plugin_path, '/');
+    if (name == NULL) {
+        name = plugin_path;
+    }
+    else {
+        name += 1;
+    }
+
+    size_t len = strlen(name);
+    char* out  = malloc(len + 1);
+    memcpy(out, name, len + 1);
+    return out;
+}
+
+static char* module_suffix_to_path(const char* module_suffix) {
+    size_t len = strlen(module_suffix);
+    char* out  = malloc(len + 1);
+    for (size_t i = 0; i < len; ++i) {
+        out[i] = module_suffix[i] == '.' ? '/' : module_suffix[i];
+    }
+    out[len] = '\0';
+    return out;
+}
+
+static int caller_is_within_plugin(lua_State* L, const char* plugin_path) {
+    lua_Debug debug           = {};
+    size_t plugin_path_length = strlen(plugin_path);
+
+    for (int level = 0; lua_getstack(L, level, &debug); ++level) {
+        if (!lua_getinfo(L, "S", &debug)) {
+            continue;
+        }
+
+        if (debug.source == NULL || debug.source[0] != '@') {
+            continue;
+        }
+
+        const char* source_path = debug.source + 1;
+        if (strncmp(source_path, plugin_path, plugin_path_length) != 0) {
+            continue;
+        }
+
+        if (source_path[plugin_path_length] == '\0' ||
+            source_path[plugin_path_length] == '/') {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static int push_plugin_module_loader(
+    lua_State* L, const char* plugin_path, const char* module_suffix) {
+    char* relative_path = module_suffix_to_path(module_suffix);
+    size_t plugin_len   = strlen(plugin_path);
+    size_t relative_len = strlen(relative_path);
+
+    const char* root_file_suffix = "/init.lua";
+    const char* lua_file_suffix  = "/lua/";
+    const char* file_suffix      = ".lua";
+    const char* init_suffix      = "/init.lua";
+
+    char* root_init = malloc(plugin_len + strlen(root_file_suffix) + 1);
+    snprintf(root_init, plugin_len + strlen(root_file_suffix) + 1, "%s%s",
+        plugin_path, root_file_suffix);
+
+    char* lua_file = malloc(plugin_len + strlen(lua_file_suffix) +
+                            relative_len + strlen(file_suffix) + 1);
+    snprintf(lua_file,
+        plugin_len + strlen(lua_file_suffix) + relative_len +
+            strlen(file_suffix) + 1,
+        "%s%s%s%s", plugin_path, lua_file_suffix, relative_path, file_suffix);
+
+    char* lua_init = malloc(plugin_len + strlen(lua_file_suffix) +
+                            relative_len + strlen(init_suffix) + 1);
+    snprintf(lua_init,
+        plugin_len + strlen(lua_file_suffix) + relative_len +
+            strlen(init_suffix) + 1,
+        "%s%s%s%s", plugin_path, lua_file_suffix, relative_path, init_suffix);
+
+    int status = LUA_ERRFILE;
+    if (module_suffix[0] == '\0' && access(root_init, R_OK) == 0) {
+        status = luaL_loadfile(L, root_init);
+    }
+    else if (access(lua_file, R_OK) == 0) {
+        status = luaL_loadfile(L, lua_file);
+    }
+    else if (access(lua_init, R_OK) == 0) {
+        status = luaL_loadfile(L, lua_init);
+    }
+
+    free(relative_path);
+    free(root_init);
+    free(lua_file);
+    free(lua_init);
+
+    if (status == LUA_OK) {
+        return 1;
+    }
+    if (status != LUA_ERRFILE) {
+        return lua_error(L);
+    }
+
+    return 0;
+}
+
+static int plugin_namespace_searcher(lua_State* L) {
+    const char* module_name   = luaL_checkstring(L, 1);
+    const char* plugin_name   = lua_tostring(L, lua_upvalueindex(1));
+    const char* plugin_path   = lua_tostring(L, lua_upvalueindex(2));
+    size_t plugin_name_length = strlen(plugin_name);
+
+    if (strncmp(module_name, plugin_name, plugin_name_length) != 0) {
+        lua_pushfstring(L, "\n\tno plugin namespace '%s' for module '%s'",
+            plugin_name, module_name);
+        return 1;
+    }
+
+    const char* module_suffix = module_name + plugin_name_length;
+    if (module_suffix[0] == '\0') {
+        module_suffix = "";
+    }
+    else if (module_suffix[0] == '.') {
+        module_suffix += 1;
+    }
+    else {
+        lua_pushfstring(L, "\n\tno plugin namespace '%s' for module '%s'",
+            plugin_name, module_name);
+        return 1;
+    }
+
+    if (!caller_is_within_plugin(L, plugin_path)) {
+        lua_pushfstring(L,
+            "\n\tmodule '%s' is private to plugin namespace '%s'", module_name,
+            plugin_name);
+        return 1;
+    }
+
+    if (push_plugin_module_loader(L, plugin_path, module_suffix)) {
+        return 1;
+    }
+
+    lua_pushfstring(L,
+        "\n\tno file '%s/init.lua'\n\tno file '%s/lua/%s.lua'\n\tno file "
+        "'%s/lua/%s/init.lua'",
+        plugin_path, plugin_path, module_suffix, plugin_path, module_suffix);
+    return 1;
+}
+
+static int register_plugin_namespace_searcher(
+    lua_State* L, const char* plugin_name, const char* plugin_path) {
+    lua_getglobal(L, "package");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return luaL_error(L, "package table is not available");
+    }
+
+    lua_getfield(L, -1, "_rewsh_plugin_namespaces");
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setfield(L, -3, "_rewsh_plugin_namespaces");
+    }
+
+    lua_getfield(L, -1, plugin_name);
+    if (lua_toboolean(L, -1)) {
+        lua_pop(L, 3);
+        return 0;
+    }
+    lua_pop(L, 1);
+
+    lua_pushboolean(L, 1);
+    lua_setfield(L, -2, plugin_name);
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "searchers");
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 2);
+        return luaL_error(L, "package.searchers is not available");
+    }
+
+    lua_pushstring(L, plugin_name);
+    lua_pushstring(L, plugin_path);
+    lua_pushcclosure(L, plugin_namespace_searcher, 2);
+    lua_seti(L, -2, lua_rawlen(L, -2) + 1);
+
+    lua_pop(L, 2);
+    return 0;
+}
+
+static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
+    char* plugin_name           = plugin_namespace_from_path(plugin_path);
+    size_t base_len             = strlen(plugin_path);
+    const char* lua_suffix      = "/lua/?.lua";
+    const char* lua_init_suffix = "/lua/?/init.lua";
+    const char* so_suffix       = "/?.so";
+
+    char* lua_path      = malloc(base_len + strlen(lua_suffix) + 1);
+    char* lua_init_path = malloc(base_len + strlen(lua_init_suffix) + 1);
+    char* c_path        = malloc(base_len + strlen(so_suffix) + 1);
+
+    snprintf(lua_path, base_len + strlen(lua_suffix) + 1, "%s%s", plugin_path,
+        lua_suffix);
+    snprintf(lua_init_path, base_len + strlen(lua_init_suffix) + 1, "%s%s",
+        plugin_path, lua_init_suffix);
+    snprintf(c_path, base_len + strlen(so_suffix) + 1, "%s%s", plugin_path,
+        so_suffix);
+
+    int status =
+        register_plugin_namespace_searcher(L, plugin_name, plugin_path);
+    if (status == 0) {
+        status = package_append_path(L, "path", lua_init_path);
+    }
+    if (status == 0) {
+        status = package_append_path(L, "path", lua_path);
+    }
+    if (status == 0) {
+        status = package_append_path(L, "cpath", c_path);
+    }
+
+    free(plugin_name);
+    free(lua_path);
+    free(lua_init_path);
+    free(c_path);
+    return status;
+}
+
+static int lua_plugin_api_require(lua_State* L) {
+    const char* path = lua_tostring(L, 1);
+    if (!manager_is_plugin_loaded(state.manager, path)) {
+        manager_load_plugin(state.manager, path);
+    }
+    struct PluginData* d    = get_plugin(state.manager, path);
+    struct PluginHandler* h = get_plugin_handler(d);
+
+    switch (plugin_get_kind(d)) {
+    case PLUGIN_KIND_C:
+    case PLUGIN_KIND_BINARY:
+        if (h->setup_table_reference != 0) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, h->setup_table_reference);
+        }
+        else {
+            lua_newtable(L);
+        }
+        h->setup(L);
+        break;
+
+    case PLUGIN_KIND_LUA:
+        if (h->setup_reference != 0) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, h->setup_reference);
+            return 1;
+        }
+
+        if (register_plugin_module_paths(L, h->lua_path) != 0) {
+            return lua_error(L);
+        }
+
+        lua_pushfstring(L, "%s/init.lua", h->lua_path);
+        const char* entrypoint = lua_tostring(L, -1);
+        if (luaL_loadfile(L, entrypoint) != LUA_OK) {
+            lua_remove(L, -2);
+            return lua_error(L);
+        }
+        lua_remove(L, -2);
+
+        if (lua_pcall(L, 0, 1, 0) != LUA_OK) {
+            return lua_error(L);
+        }
+
+        if (!lua_istable(L, -1)) {
+            return luaL_error(L,
+                "failed to load lua plugin '%s': entrypoint must return a table",
+                path);
+        }
+
+        lua_getfield(L, -1, "unload");
+        if (lua_isfunction(L, -1)) {
+            h->destruct_reference = luaL_ref(L, LUA_REGISTRYINDEX);
+        }
+        else {
+            lua_pop(L, 1);
+        }
+
+        lua_getfield(L, -1, "setup");
+        if (lua_isfunction(L, -1)) {
+            if (h->setup_table_reference != 0) {
+                lua_rawgeti(L, LUA_REGISTRYINDEX, h->setup_table_reference);
+            }
+            else {
+                lua_newtable(L);
+            }
+
+            if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
+                return lua_error(L);
+            }
+
+            if (lua_isnil(L, -1)) {
+                lua_pop(L, 1);
+            }
+            else if (!lua_istable(L, -1)) {
+                return luaL_error(L,
+                    "failed to load lua plugin '%s': setup must return a table "
+                    "or nil",
+                    path);
+            }
+        }
+        else {
+            lua_pop(L, 1);
+        }
+
+        if (lua_gettop(L) == 0 || !lua_istable(L, -1)) {
+            return luaL_error(L,
+                "failed to load lua plugin '%s': no exports table produced",
+                path);
+        }
+
+        h->setup_reference = luaL_ref(L, LUA_REGISTRYINDEX);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, h->setup_reference);
+        break;
+    }
+
+    return 1;
+}
+
+static int lua_plugin_api_destroy(lua_State* L) {
+    return 0;
+}
+
 void init_plugin_table() {
     lua_newtable(state.L);
 
-    /* plugins.load = l_plugins_load */
-    lua_pushcfunction(state.L, plugin_load);
+    lua_pushcfunction(state.L, lua_plugin_api_resolve);
+    lua_setfield(state.L, -2, "resolve");
+
+    lua_pushcfunction(state.L, lua_plugin_api_setup);
+    lua_setfield(state.L, -2, "setup");
+
+    lua_pushcfunction(state.L, lua_plugin_api_load);
     lua_setfield(state.L, -2, "load");
 
-    /* plugins.setup = l_plugin_setup (method available via metatable) */
-    lua_pushcfunction(state.L, empty_plugin_setup);
-    lua_setfield(state.L, -2, "setup");
+    lua_pushcfunction(state.L, lua_plugin_api_require);
+    lua_setfield(state.L, -2, "require");
+
+    lua_pushcfunction(state.L, lua_plugin_api_destroy);
+    lua_setfield(state.L, -2, "destroy");
 
     /* plugins.__index = plugins (for method lookup) */
     lua_pushvalue(state.L, -1);
@@ -387,35 +566,14 @@ void end_shell_state() {
     path_destruct(&state.config.plugins);
     path_destruct(&state.config.config);
 
-    for (size_t i = 0; i < state.plugins.len; ++i) {
-        struct PluginHandler* handler = &state.plugins.data[i];
-        enum PluginKind kind          = plugin_get_kind(handler->plugin);
-        if (kind == PLUGIN_KIND_C) {
-            handler->c.destruct(state.L);
-        }
-        else if (kind == PLUGIN_KIND_LUA &&
-                 handler->lua.destruct_reference != LUA_NOREF) {
-            lua_rawgeti(
-                state.L, LUA_REGISTRYINDEX, handler->lua.destruct_reference);
-            if (lua_pcall(state.L, 0, 0, 0) != LUA_OK) {
-                printf("Lua plugin destruct error: %s\n",
-                    lua_tostring(state.L, -1));
-                lua_pop(state.L, 1);
-            }
-        }
+    const CIteratorString* iter = get_plugin_iterator(state.manager);
+    const char* next            = NULL;
+
+    while ((next = next_plugin_name(iter)) != NULL) {
+        manager_unload_plugin(state.L, state.manager, next);
     }
 
     lua_close(state.L);
-
-    for (size_t i = 0; i < state.plugins.len; ++i) {
-        struct PluginHandler* handler = &state.plugins.data[i];
-        enum PluginKind kind          = plugin_get_kind(handler->plugin);
-        if (kind == PLUGIN_KIND_C) {
-            dlclose(handler->c.handler);
-        }
-    }
-
-    free(state.plugins.data);
     free(state.hooks.data);
     state = (struct ShellState){};
 }

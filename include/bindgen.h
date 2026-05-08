@@ -10,50 +10,68 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "lua.h"
 
-typedef enum PluginKind {
-  PLUGIN_KIND_LUA,
-  PLUGIN_KIND_BINARY,
-  PLUGIN_KIND_C,
-} PluginKind;
+enum PluginKind {
+  PLUGIN_KIND_LUA = 0,
+  PLUGIN_KIND_BINARY = 1,
+  PLUGIN_KIND_C = 2,
+};
 
-typedef struct Args Args;
+struct Args;
 
-typedef struct Plugin Plugin;
+struct CIterator______c_char;
 
-typedef struct PluginManager PluginManager;
+struct PluginData;
 
-const struct Plugin *add_or_get_plugin(struct PluginManager *manager_ptr,
-                                       const char *path);
+struct PluginHandler;
 
-struct Plugin *add_plugin(struct PluginManager *manager_ptr,
-                          const char *path);
+struct PluginManager;
+
+typedef struct CIterator______c_char CIteratorString;
 
 void delete_plugin_manager(struct PluginManager *ptr);
 
 void free_args(struct Args *args);
 
-struct Plugin *get_plugin(struct PluginManager *manager_ptr,
-                          const char *path);
+struct PluginData *get_plugin(struct PluginManager *manager_ptr,
+                              const char *path);
+
+struct PluginHandler *get_plugin_handler(struct PluginData *plugin);
+
+const CIteratorString *get_plugin_iterator(struct PluginManager *manager);
 
 const char *get_script(const struct Args *args);
 
 bool is_debug(const struct Args *args);
 
-char is_plugin_loaded(struct PluginManager *manager_ptr,
-                      const char *path);
+char manager_is_plugin_loaded(struct PluginManager *manager_ptr,
+                              const char *path);
 
-char mark_plugin_as_loaded(struct PluginManager *manager_ptr,
-                           const char *path);
+int32_t manager_load_plugin(struct PluginManager *manager_ptr,
+                            const char *path);
+
+struct PluginData *manager_resolve_plugin(struct PluginManager *manager_ptr,
+                                          const char *path);
+
+int32_t manager_unload_plugin(lua_State *lua,
+                              struct PluginManager *manager_ptr,
+                              const char *path);
 
 struct PluginManager *new_plugin_manager(void);
 
+const char *next_plugin_name(const CIteratorString *iter);
+
 struct Args *parse_args(int argc, const char *const *argv);
 
-enum PluginKind plugin_get_kind(struct Plugin *plugin);
+char *plugin_get_cache_path(const struct PluginData *plugin);
 
-char *plugin_get_name(struct Plugin *plugin);
+char *plugin_get_data_path(const struct PluginData *plugin);
 
-char *plugin_get_path(struct Plugin *plugin);
+enum PluginKind plugin_get_kind(struct PluginData *plugin);
+
+char *plugin_get_name(const struct PluginData *plugin);
+
+char *plugin_get_url(struct PluginData *plugin);
 
 #endif  /* __BIND_GEN__ */
