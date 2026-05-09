@@ -1,3 +1,4 @@
+rewsh.plugin.require("core://parser")
 rewsh.plugin.require("core://api")
 
 local input_state = {

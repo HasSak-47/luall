@@ -6,6 +6,10 @@
 #include <path_api.h>
 #include <process.h>
 #include <state_api.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "debug.h"
 #include "event_api.h"
 #include "lua.h"
 
@@ -18,16 +22,41 @@ int plugin_setup(lua_State* L) {
     luaL_requiref(L, "string", luaopen_string, true);
     luaL_requiref(L, "os", luaopen_os, true);
 
+    debug_printf("getting rewsh\n");
     lua_getglobal(L, "rewsh");
-    lua_newtable(L);
+    if (lua_isnil(L, -1)) {
+        printf("fuck!\n");
+        exit(-1);
+    }
 
-    lua_newtable(L);
-    lua_setfield(L, -2, "api");
-    lua_newtable(L);
-    lua_setfield(L, -2, "state");
+    debug_printf("creating rewsh.api\n");
+    lua_getfield(L, -1, "api");
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_setfield(L, -2, "api");
+    }
 
-    lua_setfield(L, -2, "core");
+    debug_printf("creating rewsh.core\n");
+    debug_printf("creating rewsh.core.api\n");
+    lua_getfield(L, -1, "core");
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_newtable(L);
+        lua_setfield(L, -2, "api");
+        lua_setfield(L, -2, "core");
+    }
 
+    debug_printf("creating rewsh.state\n");
+    lua_getfield(L, -1, "state");
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        lua_setfield(L, -2, "state");
+    }
+
+    debug_printf("finished expanding rewsh namespace\n");
     process_setup_lua_api(L);
     path_setup_lua_api(L);
     state_setup_lua_api(L);

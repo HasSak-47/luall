@@ -76,7 +76,6 @@ static void complile_c_plugin_no_makefile(
         char* path_str = path_get_string(compilation_units.data[i]);
         debug_printf("\tpushing unit: %s @ %p\n", path_str, path_str);
         vector_push(args, string_from_cstr(path_str));
-        debug_printf("\tcleaning temp var...\n");
 
         free(path_str);
     }

@@ -207,6 +207,11 @@ local function run_cmd(process)
         return
     end
 
+    if rewsh.api.builtin[name] then
+        rewsh.api.builtin[name](args)
+        return
+    end
+
     run_external(name, args)
 end
 

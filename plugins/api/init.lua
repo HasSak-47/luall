@@ -13,7 +13,7 @@ local function expand_path(path)
     end
 
     local parsed = rewsh.api.path.parse(path)
-    parsed:expand_path(rewsh.state.vars.cwd)
+    parsed:expand_path(rewsh.vars.cwd)
     return parsed
 end
 
@@ -105,33 +105,35 @@ local function setup_extension_namespace()
         reset_color = reset_color,
         tokenize = parser.tokenize,
         prompt = prompt,
-        cd = function(args)
-            local target = nil
-            if args == nil or #args == 0 then
-                target = rewsh.state.vars.user.home
-            else
-                target = expand_path(args[1])
-            end
-
-            local ok, err = rewsh.core.api.cd(target)
-            if not ok and err ~= nil then
-                print(err)
-            end
-        end,
-
-        lua = function(args)
-            if #args == 0 then
-                return
-            end
-
-            local func = load(args[1])
-            if func ~= nil then
-                local ok = pcall(func)
-                if not ok then
-                    print("failed to run")
+        builtin = {
+            cd = function(args)
+                local target = nil
+                if args == nil or #args == 0 then
+                    target = rewsh.state.vars.user.home
+                else
+                    target = expand_path(args[1])
                 end
-            end
-        end,
+
+                local ok, err = rewsh.core.api.cd(target)
+                if not ok and err ~= nil then
+                    print(err)
+                end
+            end,
+
+            lua = function(args)
+                if #args == 0 then
+                    return
+                end
+
+                local func = load(args[1])
+                if func ~= nil then
+                    local ok = pcall(func)
+                    if not ok then
+                        print("failed to run")
+                    end
+                end
+            end,
+        }
     }, { __index = rewsh.core.api })
     rewsh.vars = setmetatable({}, {
         __index = function(_, name)
