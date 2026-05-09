@@ -1,43 +1,26 @@
 # rewsh
 
 `rewsh` is an interactive Linux shell written in C with an embedded Lua runtime.
-The shell core owns terminal I/O, process execution, path/state userdata, and plugin loading.
-Shell behavior such as prompt rendering, input handling, and command parsing lives in plugins.
+It is built around a small native core and a plugin-driven frontend: terminal I/O, process execution, userdata, and plugin loading live in the core, while prompt rendering, input handling, and parsing live in plugins.
 
-## Current Shape
+## Highlights
 
-- The shell loop and input decoding live in C.
-- CLI argument parsing and plugin manifest parsing live in Rust.
-- `core` is a C plugin that exposes the Lua API for:
-  - process execution
-  - path objects
-  - state access
-  - event hooks
-  - terminal mode helpers
-- `api` is a Lua plugin that owns:
-  - prompt rendering
-  - input buffer editing
-  - shell parsing
-  - aliases and Lua-side builtins
-  - session history
-
-The bootstrap config in [config/init.lua](./config/init.lua) loads `api`, which in turn uses the `core` plugin API.
-
-## Features
-
+- Minimal shell engine
 - Embedded Lua runtime for shell customization
-- Plugin manifests with app-local loading via `app://...`
-- Lua plugins and C plugins
-- `RewshPath` userdata exposed to Lua
-- Process execution and simple pipelines from the frontend parser
-- Runtime state exposed to Lua:
-  - `rewsh.state.vars.cwd`
-  - `rewsh.state.vars.user`
-  - `rewsh.state.vars.host`
-  - `rewsh.state.vars.env`
-  - `rewsh.state.vars.error`
-  - `rewsh.state.vars.debug`
-- Private namespaced Lua module resolution for Lua plugins
+- Plugin-driven shell behavior instead of hardcoded frontend logic
+- Hybrid C/Rust/Lua design
+- URL-addressed plugins with dependency resolution
+- Private namespaced Lua module loading for plugins
+- Runtime process, path, and state APIs exposed to Lua
+
+## Architecture
+
+- The shell loop and terminal input live in C.
+- Plugin manifests and URL resolution live in Rust.
+- `core` is a C plugin that installs the low-level runtime API into Lua.
+- `api` is a Lua plugin that builds the shell-facing API on top of `core`.
+
+The bootstrap config in [config/init.lua](./config/init.lua) loads `core://api`, which pulls in `core://core` first and then installs the frontend layer.
 
 ## Project Layout
 
@@ -69,68 +52,63 @@ The main binary is `./rewsh`.
 
 ## Plugin Model
 
-Each plugin has a `rewsh.toml` manifest.
+Each plugin has a `rewsh.toml` manifest and is addressed by URL.
 
-- C plugins are compiled and loaded as shared objects.
-- Lua plugins are loaded from `init.lua`.
-- `rewsh.plugin.require("core://name")` loads a plugin and returns the table it exports.
-- Inside a Lua plugin, `require(...)` is private to that plugin namespace.
-- When a Lua plugin is loaded, rewsh registers namespaced module lookup rooted at the plugin path:
-  - `require("name")` -> `<plugin>/init.lua`
-  - `require("name.mod")` -> `<plugin>/lua/mod.lua`
-  - `require("name.mod")` -> `<plugin>/lua/mod/init.lua`
-- rewsh also appends these plugin-local search paths:
-  - `<plugin>/lua/?.lua`
-  - `<plugin>/lua/?/init.lua`
-  - `<plugin>/?.so`
+- `core://name` currently resolves to `./plugins/name`
+- `path:///foo/bar` resolves to `/foo/bar`
 
-That lets a Lua plugin use a layout like:
+There are two plugin kinds: C plugins loaded as shared objects, and Lua plugins loaded from `init.lua`.
 
-```text
-plugins/api/
-  init.lua
-  lua/
-    api/
-      parser.lua
-```
+The lifecycle is simple:
 
-Then:
+- `resolve` reads the manifest and dependency graph
+- `load` prepares the plugin handler
+- `setup` stores options for later activation
+- `require` activates the plugin and returns its exported table
 
-```lua
-local parser = require("api.parser")
+Lua plugins must return a table from `init.lua`. They may also expose optional `setup(opts)` and `unload()` hooks.
 
-return {
-    setup = function()
-        return {
-            parser = parser,
-        }
-    end,
-}
-```
+Plugin-local Lua modules are private to the plugin that owns them. A plugin can load modules from:
 
-Code outside that plugin cannot directly `require("api.parser")`; it must call `rewsh.plugin.require(...)` and use the returned table.
+- `<plugin>/init.lua`
+- `<plugin>/lua/*.lua`
+- `<plugin>/lua/*/init.lua`
+- `<plugin>/*.so`
 
 ## Runtime API
 
-The shell exposes a global `rewsh` table to Lua.
+The shell exposes a global `rewsh` table to Lua. Before core plugins load, it is mostly a bootstrap surface for plugin management.
 
-- `rewsh.plugin.resolve("core://name")`: resolve plugin metadata
-- `rewsh.plugin.load("core://name")`: load a plugin handler
-- `rewsh.plugin.setup("core://name", opts?)`: store setup options for a plugin
-- `rewsh.plugin.require("core://name", opts?)`: load a plugin and return its exported table
-- `rewsh.plugin.destroy("core://name")`: unload a plugin
-- `rewsh.api.process`: create commands and pipes
-- `rewsh.api.path`: parse and build `RewshPath` values
-- `rewsh.api.on_event(...)`: bind enter/exit/key_input hooks
-- `rewsh.api.cd(...)`: change cwd from Lua
-- `rewsh.state`: mutable runtime state
-- `rewsh.api`: frontend-owned Lua namespace installed by `api`
+- `rewsh.plugin.resolve(url)`
+- `rewsh.plugin.load(url)`
+- `rewsh.plugin.setup(url, opts?)`
+- `rewsh.plugin.require(url, opts?)`
+- `rewsh.plugin.destroy(url)`
+
+### Core plugins
+
+`core://core` is the low-level runtime plugin. Requiring it opens the Lua standard libraries used by the shell, creates `rewsh.core`, and installs the C-backed runtime API for:
+
+- `rewsh.core.api.process`: create commands and pipes
+- `rewsh.core.api.path`: parse and build `Path` values
+- `rewsh.core.api.on_event(...)`: bind enter/exit/key_input hooks
+- `rewsh.core.api.cd(...)`: change cwd from Lua
+- `rewsh.core.state`: mutable runtime state
+
+`core://api` is the higher-level shell plugin. It depends on `core://core`, then installs the frontend shell layer:
+
+- `rewsh.api`: the shell-facing API table
+- `rewsh.api.parser`: the frontend parser
+- `rewsh.api.prompt(...)` and `rewsh.api.render_input(...)`: prompt and input rendering helpers
+- `rewsh.api.expand_path(...)` and `rewsh.api.format_path(...)`: path helpers built on top of `rewsh.core`
+- `rewsh.vars`: a Lua-facing view over `rewsh.core.state.vars`
+
+`rewsh.api` falls back to `rewsh.core.api`, so higher-level helpers and lower-level runtime primitives are available through the same frontend namespace.
 
 ## Current Limitations
 
 - No syntax highlighting
 - No tab completion
-- No history navigation UI yet
 - No job control (`fg`, `bg`)
 - No glob expansion
 - Redirection tokens are parsed but not executed yet

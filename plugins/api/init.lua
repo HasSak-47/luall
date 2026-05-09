@@ -133,14 +133,12 @@ local function setup_extension_namespace()
             end
         end,
     }, { __index = rewsh.core.api })
-    rewsh.vars = setmetatable({
-        history = {
-            'lua print("hello world")',
-            "!ls -lA",
-        },
-    }, {
+    rewsh.vars = setmetatable({}, {
         __index = function(_, name)
             return rewsh.core.state.vars[name]
+        end,
+        __newindex = function(_, name, val)
+            rewsh.core.state.vars[name] = val
         end,
     })
 end

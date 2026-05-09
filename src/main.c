@@ -43,10 +43,6 @@ int main(const int argc, const char* argv[]) {
     struct InputKey key = input_key_none();
 
     while (state.running) {
-        if (read_input_key(&key)) {
-            debug_printf("running key event");
-            trigger_input_hook(key);
-        }
         if (state.reload) {
             debug_printf("reloading...");
             debug_printf("running exit hooks before reload...");
@@ -58,6 +54,10 @@ int main(const int argc, const char* argv[]) {
             debug_printf("running enter hooks after reload...");
             trigger_enter_hook();
             state.reload = false;
+        }
+
+        if (read_input_key(&key)) {
+            trigger_input_hook(key);
         }
     }
     trigger_exit_hook();

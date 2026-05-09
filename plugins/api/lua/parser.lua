@@ -270,16 +270,14 @@ end
 ---@return nil
 local function parse(input)
     if input == nil or input == "" then
-        rewsh.state.vars.error = 0
+        rewsh.vars.error = 0
         return
     end
-
-    table.insert(rewsh.vars.history, input)
 
     local set_debug = input:sub(1, 1) == "!"
     if set_debug then
         input = input:sub(2)
-        rewsh.state.vars.debug = true
+        rewsh.vars.debug = true
     end
 
     local lines = {}
@@ -294,7 +292,7 @@ local function parse(input)
     end
 
     if set_debug then
-        rewsh.state.vars.debug = false
+        rewsh.vars.debug = false
     end
 end
 

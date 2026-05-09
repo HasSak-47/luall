@@ -1,54 +1,11 @@
 rewsh.plugin.require("core://api")
 
-local buffer = {
-    write = function(self, data)
-        local start = self.data:sub(1, self.index)
-        local finish = self.data:sub(self.index + 1)
-        self.data = start .. data .. finish
-    end,
-}
-
-buffer.__index = buffer
-buffer.new = function()
-    local b = {
-        index = 0,
-        data = '',
-    }
-
-    setmetatable(b, buffer)
-    return b
-end
-
-local view = {
-    write = function(self, data)
-        local start = self.data:sub(1, self.index)
-        local finish = self.data:sub(self.index + 1)
-        self.data = start .. data .. finish
-    end,
-}
-
-view.__index = view
-view.new = function(x, y)
-    if x == nil then
-        x = 1
-    end
-    if y == nil then
-        y = 1
-    end
-
-    local v = {
-        x = x,
-        y = y,
-
-        buffer = buffer.new()
-    }
-
-    setmetatable(v, view)
-    return v
-end
-
-
 local input_state = {
+    history = {
+        index = 0,
+        history = {},
+        current = "",
+    },
     data = '',
     index = 0
 }
@@ -58,14 +15,23 @@ local function submit_input()
 
     io.stdout:write("\r" .. rewsh.api.prompt() .. line .. "\n")
 
-    local ok, err = pcall(rewsh.api.parser.parse, line)
-    if not ok then
-        print('failed to parse', err)
+    if line ~= "" then
+        local ok, err = pcall(rewsh.api.parser.parse, line)
+        if not ok then
+            print('failed to parse', err)
+            return
+        end
+    else
         return
     end
 
+    if input_state.history.history[1] ~= line then
+        table.insert(input_state.history.history, 1, line)
+    end
     input_state.data = ""
     input_state.index = 0
+    input_state.history.index = 0
+    input_state.history.current = ""
 end
 
 
@@ -73,8 +39,10 @@ end
 ---@return nil
 local function handle_input(input)
     if input.kind == "letter" then
-        if input.letter == "c" and input.ctrl then
-            rewsh.state.running = false
+        if input.ctrl then
+            if input.letter == "c" then
+                rewsh.state.running = false
+            end
             return
         end
 
@@ -82,6 +50,8 @@ local function handle_input(input)
         local finish = input_state.data:sub(input_state.index + 1)
         input_state.data = start .. input.letter .. finish
         input_state.index = input_state.index + 1
+        input_state.history.index = 0
+        input_state.history.current = input_state.data
     elseif input.kind == "special" then
         if input.special == "left" then
             if input_state.index > 0 then
@@ -97,9 +67,47 @@ local function handle_input(input)
                 local finish = input_state.data:sub(input_state.index + 1)
                 input_state.data = start .. finish
                 input_state.index = input_state.index - 1
+                input_state.history.index = 0
+                input_state.history.current = input_state.data
             end
         elseif input.special == "enter" then
             submit_input()
+        elseif input.special == "up" then
+            local history = input_state.history
+            if history.index == 0 then
+                history.current = input_state.data
+            end
+
+            local available = #history.history
+            if available == 0 then
+                rewsh.api.render_input(input_state.data, input_state.index)
+                return
+            end
+
+            local next = history.index + 1
+            if next > available then
+                next = available
+            end
+
+            history.index = next
+            input_state.data = history.history[next] or ""
+            input_state.index = #input_state.data
+        elseif input.special == "down" then
+            local history = input_state.history
+            if history.index == 0 then
+                rewsh.api.render_input(input_state.data, input_state.index)
+                return
+            end
+
+            local next = history.index - 1
+            history.index = next
+
+            if next == 0 then
+                input_state.data = history.current
+            else
+                input_state.data = history.history[next] or ""
+            end
+            input_state.index = #input_state.data
         end
     end
 

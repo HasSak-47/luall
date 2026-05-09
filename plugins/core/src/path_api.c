@@ -92,7 +92,6 @@ static int lua_get_name(lua_State* L) {
 }
 
 static int lua_path_gc(lua_State* L) {
-    debug_printf("path deletion..\n");
     struct Path* path = check_path(L, -1);
     path_destruct(path);
     return 0;
