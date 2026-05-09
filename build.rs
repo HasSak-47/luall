@@ -1,9 +1,14 @@
 use std::path::PathBuf;
 
 fn main() {
+    let lua_config = pkg_config::Config::new()
+        .atleast_version("5.4")
+        .probe("lua")
+        .unwrap();
     println!("cargo:rerun-if-changed=include/plugin.h");
     println!("cargo:rerun-if-changed=include/bindgen.h");
     println!("cargo:rerun-if-changed=include/plugin_bindings.h");
+
     let mut bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
@@ -12,6 +17,10 @@ fn main() {
         .impl_debug(true)
         .impl_partialeq(true)
         .derive_copy(true);
+
+    for lib in &lua_config.include_paths {
+        bindings = bindings.clang_arg(format!("-I{}", lib.display()));
+    }
 
     let blocks = ["PluginData", "PluginKind"];
 

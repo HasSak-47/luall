@@ -19,3 +19,4 @@ crate-type = ["cdylib"]
 clang = {version="2.0.0", features=["runtime", "clang_10_0"]}
 bindgen = "0.71.0"
 cbindgen = "0.24.0"
+pkg-config = "0.3.33"

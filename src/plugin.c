@@ -248,6 +248,10 @@ struct PluginHandler load_c_plugin(const struct PluginData* p) {
     return c;
 }
 
+struct PluginHandler load_rust_plugin(const struct PluginData* p) {
+    return (struct PluginHandler){};
+}
+
 struct PluginHandler load_lua_plugin(const struct PluginData* p) {
     return (struct PluginHandler){
         .kind = PLUGIN_KIND_LUA, .lua_path = plugin_get_data_path(p)};
@@ -260,6 +264,8 @@ void unload_binary_plugin(lua_State* state, struct PluginHandler* p) {
 void unload_c_plugin(lua_State* state, struct PluginHandler* p) {
     dlclose(p->handler);
 }
+
+void unload_rust_plugin(lua_State* state, struct PluginHandler* p) {}
 
 void unload_lua_plugin(lua_State* state, struct PluginHandler* p) {
     // TODO: call destructor or something...
