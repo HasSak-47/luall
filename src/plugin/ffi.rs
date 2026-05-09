@@ -1,5 +1,5 @@
 use std::{
-    ffi::{CStr, CString, c_char},
+    ffi::{CStr, CString, c_char, c_int},
     ptr,
 };
 
@@ -17,10 +17,25 @@ pub extern "C" fn plugin_get_name(plugin: *const PluginData) -> *mut c_char {
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn plugin_get_cache_path(plugin: *const PluginData) -> *mut c_char {
+pub extern "C" fn plugin_get_compilation_path(plugin: *const PluginData) -> *mut c_char {
     let plugin = unsafe { &*plugin };
+    let mut path = plugin.artifact_path.clone();
+    path.push("compilation");
 
-    let s = CString::new(plugin.artifact_path.to_str().unwrap()).unwrap();
+    let s = CString::new(path.to_str().unwrap()).unwrap();
+
+    return s.into_raw();
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+pub extern "C" fn plugin_get_shared_object_path(plugin: *const PluginData) -> *mut c_char {
+    let plugin = unsafe { &*plugin };
+    let mut path = plugin.artifact_path.clone();
+    path.push(&plugin.manifest.plugin.name);
+    path.set_extension("so");
+
+    let s = CString::new(path.to_str().unwrap()).unwrap();
 
     return s.into_raw();
 }
@@ -217,4 +232,17 @@ pub extern "C" fn get_plugin_iterator(manager: *mut PluginManager) -> *const CIt
     return Box::into_raw(Box::new(CIterator {
         i: Box::into_raw(Box::new(plugins)) as *mut _,
     })) as *const _;
+}
+
+#[allow(unused)]
+#[unsafe(no_mangle)]
+
+pub extern "C" fn manager_is_plugin_resolved(
+    manager: *mut PluginManager,
+    path: *const c_char,
+) -> c_int {
+    let url = url::Url::parse(unsafe { CStr::from_ptr(path) }.to_str().unwrap()).unwrap();
+    let manager = unsafe { (&*manager) };
+
+    return manager.plugins.contains_key(&url) as i32;
 }

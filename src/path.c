@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include <dirent.h>
+#include <errno.h>
 
 #include <debug.h>
 #include <ly_string.h>
@@ -30,8 +31,52 @@ bool path_is_dir(const struct Path* const p) {
     struct stat s  = {};
     stat(path_str, &s);
     bool isdir = S_ISDIR(s.st_mode);
+    free(path_str);
 
     return isdir;
+}
+
+bool path_mkdir_p(const struct Path* const p) {
+    if (p->_inner.len == 0) {
+        return true;
+    }
+
+    struct Path partial = {};
+    size_t start        = 0;
+
+    if (p->_inner.data[0].ty == ROOT_PATH) {
+        path_push_segment(
+            &partial, (struct PathSegment){.ty = ROOT_PATH, .name = {}});
+        start = 1;
+    }
+
+    for (size_t i = start; i < p->_inner.len; ++i) {
+        struct PathSegment src = p->_inner.data[i];
+        struct PathSegment dst = {.ty = src.ty, .name = {}};
+
+        if (src.ty == NAMED_PATH) {
+            vector_clone(dst.name, src.name);
+        }
+
+        path_push_segment(&partial, dst);
+
+        if (src.ty != NAMED_PATH) {
+            continue;
+        }
+
+        char* partial_str = path_get_string(partial);
+        if (mkdir(partial_str, S_IRWXU) != 0) {
+            if (errno != EEXIST || !path_is_dir(&partial)) {
+                free(partial_str);
+                path_destruct(&partial);
+                return false;
+            }
+        }
+        free(partial_str);
+    }
+
+    path_destruct(&partial);
+    return true;
 }
 
 void path_push_name(struct Path* path, const char* name) {
@@ -279,5 +324,24 @@ TEST(path_clonning) {
         ASSERT(string_cmp(path._inner.data[i].name, copy._inner.data[i].name),
             "path segments are different...");
     }
+    return 0;
+}
+
+TEST(path_mkdir_p_creates_nested_dirs) {
+    char dir_template[] = "/tmp/rewsh-path-test-XXXXXX";
+    char* root          = mkdtemp(dir_template);
+    ASSERT(root != NULL, "failed to create temporary root directory");
+
+    size_t child_len = strlen(root) + strlen("/a/b/c") + 1;
+    char* child_path = malloc(child_len);
+    ASSERT(child_path != NULL, "failed to allocate child path");
+    snprintf(child_path, child_len, "%s/a/b/c", root);
+
+    struct Path path = path_parse(child_path);
+    ASSERT(path_mkdir_p(&path), "path_mkdir_p failed to create nested dirs");
+    ASSERT(path_is_dir(&path), "deepest directory was not created");
+
+    path_destruct(&path);
+    free(child_path);
     return 0;
 }

@@ -21,6 +21,7 @@ impl PluginHandlerWrapper {
                 PluginKind::Lua => rb::load_lua_plugin((data as *const PluginData).cast()),
                 PluginKind::C => rb::load_c_plugin((data as *const PluginData).cast()),
                 PluginKind::BINARY => rb::load_binary_plugin((data as *const PluginData).cast()),
+                _ => unimplemented!(),
             }
         });
 
@@ -45,6 +46,7 @@ impl PluginHandlerWrapper {
                         rb::unload_binary_plugin(lua, handler);
                         self.handler = None;
                     }
+                    _ => unimplemented!(),
                 }
             }
         }

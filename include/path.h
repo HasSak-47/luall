@@ -27,6 +27,7 @@ struct Path {
 char* path_get_string(const struct Path path);
 void path_push_name(struct Path* path, const char* name);
 bool path_is_dir(const struct Path* const p);
+bool path_mkdir_p(const struct Path* const p);
 /* takes ownership of the string */
 void path_push_name_string(struct Path* path, struct String name);
 void path_push_segment(struct Path* path, const struct PathSegment segment);

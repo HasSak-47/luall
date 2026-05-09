@@ -30,6 +30,7 @@ pub enum PluginKind {
     BINARY = 1,
     #[default]
     C = 2,
+    Rust = 3,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -51,21 +52,59 @@ pub struct ManifestHeader {
     pub src: Option<String>,
 }
 
+fn default_true() -> bool {
+    true
+}
+
+fn is_true(v: &bool) -> bool {
+    *v
+}
+
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct Dependency {
     pub name: String,
     pub version: Option<Version>,
 
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub optional: bool,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<url::Url>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum KindOptions {
+    C { libraries: Vec<String> },
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Manifest {
     pub plugin: ManifestHeader,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opts: Option<KindOptions>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub dependecies: Vec<Dependency>,
+}
+
+impl Manifest {
+    fn generate_manifest<S: AsRef<str>>(src: S) -> Result<Manifest> {
+        let manifest: Manifest = toml::from_str(src.as_ref())?;
+
+        if let Some(opts) = &manifest.opts {
+            match (opts, manifest.plugin.kind) {
+                (KindOptions::C { .. }, PluginKind::C) => {}
+                _ => {
+                    bail!(
+                        "manifest is invalid!, opts passed are not of the same kind as the header"
+                    )
+                }
+            }
+        }
+
+        return Ok(manifest);
+    }
 }
 
 /// cbindgen:prefix-with-name
@@ -121,8 +160,8 @@ impl PluginData {
 
     pub fn resolves_from_core<P: AsRef<Path>>(path: P, location: url::Url) -> Result<PluginData> {
         let path = path.as_ref();
-        // TODO: add toggle
-        let mut plugin_path = PathBuf::from("./plugins");
+        // TODO: add toggle to set to a normal xdg path
+        let mut plugin_path = std::path::absolute(PathBuf::from("./plugins"))?;
 
         plugin_path.push(path);
         let mut manifest_path = plugin_path.clone();
@@ -133,7 +172,10 @@ impl PluginData {
         File::open(&manifest_path)?.read_to_string(&mut buf)?;
         let manifest: Manifest = toml::from_str(buf.as_str())?;
 
-        let cache_path = PathBuf::from(&format!("./.ignore/cache/{}", manifest.plugin.name));
+        let cache_path = std::path::absolute(PathBuf::from(&format!(
+            "./.ignore/cache/{}/",
+            manifest.plugin.name
+        )))?;
 
         return Ok(PluginData {
             source_url: location,
@@ -170,13 +212,13 @@ impl PluginManager {
         if self.plugins.contains_key(path) {
             return Ok(self.plugins.get_mut(path).unwrap());
         }
-
-        let path = path.clone();
-        let manifest = PluginData::resolve(&path)?;
+        let manifest = PluginData::resolve(path)?;
 
         for dependecy in &manifest.manifest.dependecies {
-            if let Some(source) = &dependecy.source {
-                self.resolve(source)?;
+            if !dependecy.optional && self.plugins.contains_key(path) {
+                if let Some(source) = &dependecy.source {
+                    self.resolve(source)?;
+                }
             }
         }
 
@@ -221,8 +263,13 @@ impl PluginManager {
             self.resolve(&name)?;
         }
 
-        for depen in self.plugins[name].manifest.dependecies.clone() {
-            self.load_plugin(&depen.source.unwrap())?;
+        for dependency in self.plugins[name].manifest.dependecies.clone() {
+            // load plugin only if it is resolved or is not optional
+            if !dependency.optional && self.plugins.contains_key(name) {
+                if let Some(source) = &dependency.source {
+                    self.load_plugin(source)?;
+                }
+            }
         }
 
         let data = &mut self.plugins.get_mut(name).unwrap();
