@@ -9,7 +9,8 @@ use std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::Read,
-    path::{Path, PathBuf},
+    path::PathBuf,
+    sync::LazyLock,
 };
 
 use anyhow::{Result, bail};
@@ -24,7 +25,7 @@ pub struct PluginHandler {
 /// cbindgen:prefix-with-name
 /// cbindgen:rename-all=SCREAMING_SNAKE_CASE
 #[repr(C)]
-#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Default, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub enum PluginKind {
     Lua = 0,
     BINARY = 1,
@@ -33,7 +34,7 @@ pub enum PluginKind {
     Rust = 3,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct ManifestHeader {
     pub name: String,
     pub version: Version,
@@ -60,7 +61,7 @@ fn is_true(v: &bool) -> bool {
     *v
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Dependency {
     pub name: String,
     pub version: Option<Version>,
@@ -72,14 +73,15 @@ pub struct Dependency {
     pub source: Option<url::Url>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum KindOptions {
     C { libraries: Vec<String> },
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Manifest {
-    pub plugin: ManifestHeader,
+    #[serde(rename = "plugin")]
+    pub header: ManifestHeader,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub opts: Option<KindOptions>,
@@ -93,7 +95,7 @@ impl Manifest {
         let manifest: Manifest = toml::from_str(src.as_ref())?;
 
         if let Some(opts) = &manifest.opts {
-            match (opts, manifest.plugin.kind) {
+            match (opts, manifest.header.kind) {
                 (KindOptions::C { .. }, PluginKind::C) => {}
                 _ => {
                     bail!(
@@ -109,7 +111,7 @@ impl Manifest {
 
 /// cbindgen:prefix-with-name
 /// cbindgen:rename-all=SCREAMING_SNAKE_CASE
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 pub enum SourceKind {
     CORE,
     PATH,
@@ -121,7 +123,7 @@ pub enum SourceKind {
 pub struct PluginData {
     pub manifest: Manifest,
     pub kind: SourceKind,
-    pub source_url: url::Url,
+    pub source: url::Url,
     // core plugins are at CORE_PLUGIN_PATH/*
     // path plugins are at the specified path
     // git plugins are stored into: $STATE_PATH/rewsh/plugins/{name}
@@ -132,66 +134,92 @@ pub struct PluginData {
     pub handler: PluginHandlerWrapper,
 }
 
-impl PluginData {
-    pub fn resolve_from_path<P: AsRef<Path>>(path: P, location: url::Url) -> Result<PluginData> {
-        let path = path.as_ref();
-        let mut plugin_path = path.to_path_buf();
+impl PartialEq for PluginData {
+    fn eq(&self, other: &Self) -> bool {
+        self.manifest == other.manifest
+            && self.kind == other.kind
+            && self.root_path == other.root_path
+            && self.artifact_path == other.artifact_path
+    }
+}
 
-        plugin_path.push(path);
-        let mut manifest_path = plugin_path.clone();
+/// cbindgen:ignore
+const STATE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    if cfg!(debug_assertions) {
+        PathBuf::from(".ignore/cache")
+    } else {
+        let mut state = dirs::state_dir().unwrap();
+        state.push("rewsh");
+        state
+    }
+});
+
+impl PluginData {
+    fn _resolve_from_disk(
+        root_path: PathBuf,
+        source: &url::Url,
+        kind: SourceKind,
+    ) -> Result<PluginData> {
+        let mut manifest_path = root_path.clone();
         manifest_path.push("rewsh");
         manifest_path.set_extension("toml");
 
         let mut buf = String::new();
         File::open(&manifest_path)?.read_to_string(&mut buf)?;
-        let manifest: Manifest = toml::from_str(buf.as_str())?;
+        let manifest = Manifest::generate_manifest(buf.as_str())?;
 
-        let cache_path = PathBuf::from(&format!("./.ignore/cache/{}", manifest.plugin.name));
+        let mut artifact_path = STATE_PATH.clone();
+        artifact_path.push(&manifest.header.name);
 
         return Ok(PluginData {
-            source_url: location,
+            source: source.clone(),
             manifest,
-            kind: SourceKind::PATH,
-            root_path: plugin_path,
-            artifact_path: cache_path,
+            kind,
+            root_path,
+            artifact_path,
             handler: PluginHandlerWrapper::default(),
         });
     }
 
-    pub fn resolves_from_core<P: AsRef<Path>>(path: P, location: url::Url) -> Result<PluginData> {
-        let path = path.as_ref();
-        // TODO: add toggle to set to a normal xdg path
+    pub fn resolve_from_path(source: &url::Url) -> Result<PluginData> {
+        let path = Self::path_from_url(source)?;
+        let plugin_path = std::path::absolute(path)?;
+        return Self::_resolve_from_disk(plugin_path, source, SourceKind::PATH);
+    }
+
+    pub fn resolves_from_core(source: &url::Url) -> Result<PluginData> {
+        // TODO: add toggle to set to a normal filesytem path
         let mut plugin_path = std::path::absolute(PathBuf::from("./plugins"))?;
+        plugin_path.push(source.host_str().unwrap());
 
-        plugin_path.push(path);
-        let mut manifest_path = plugin_path.clone();
-        manifest_path.push("rewsh");
-        manifest_path.set_extension("toml");
+        return Self::_resolve_from_disk(plugin_path, source, SourceKind::CORE);
+    }
 
-        let mut buf = String::new();
-        File::open(&manifest_path)?.read_to_string(&mut buf)?;
-        let manifest: Manifest = toml::from_str(buf.as_str())?;
+    fn path_from_url(source: &url::Url) -> Result<PathBuf> {
+        if let Some(host) = source.host_str() {
+            println!("{host}");
+            let mut path = PathBuf::from(host);
+            let suffix = source.path().trim_start_matches('/');
+            if !suffix.is_empty() {
+                path.push(suffix);
+            }
 
-        let cache_path = std::path::absolute(PathBuf::from(&format!(
-            "./.ignore/cache/{}/",
-            manifest.plugin.name
-        )))?;
+            return Ok(path);
+        }
 
-        return Ok(PluginData {
-            source_url: location,
-            manifest,
-            kind: SourceKind::CORE,
-            root_path: plugin_path,
-            artifact_path: cache_path,
-            handler: PluginHandlerWrapper::default(),
-        });
+        let path = source.path();
+        if path.is_empty() {
+            bail!("path source is missing a filesystem path: {source}");
+        }
+
+        return Ok(PathBuf::from(path));
     }
 
     pub fn resolve(source: &url::Url) -> Result<PluginData> {
         let scheme = source.scheme();
         match scheme {
-            "core" => Self::resolves_from_core(source.host_str().unwrap(), source.clone()),
-            "path" => Self::resolve_from_path(source.host_str().unwrap(), source.clone()),
+            "core" => Self::resolves_from_core(source),
+            "path" => Self::resolve_from_path(source),
             "http" | "https" => todo!("http requests not available yet"),
             _ => bail!("unsupported source location: {source}"),
         }
@@ -289,6 +317,7 @@ impl PluginManager {
 mod test {
     use crate::plugin::PluginData;
     use anyhow::*;
+    use std::path::{PathBuf, absolute};
     use url::Url;
 
     #[test]
@@ -296,5 +325,21 @@ mod test {
         let url = Url::parse("core://runtime")?;
         PluginData::resolve(&url)?;
         return Ok(());
+    }
+
+    #[test]
+    fn path_manifest_load_from_path_url() -> Result<()> {
+        let rel_path = PathBuf::from("./plugins/runtime");
+        let abs_path = absolute("./plugins/runtime")?;
+
+        let abs_url = url::Url::parse(&format!("path://{}", abs_path.display()))?;
+        let abs_plugin = PluginData::resolve(&abs_url)?;
+
+        let rel_url = url::Url::parse(&format!("path://{}", rel_path.display()))?;
+        let rel_plugin = PluginData::resolve(&rel_url)?;
+
+        assert_eq!(abs_plugin.root_path, abs_path);
+        assert_eq!(rel_plugin, abs_plugin);
+        Ok(())
     }
 }

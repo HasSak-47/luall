@@ -30,9 +30,11 @@ struct PluginHandler {
 struct PluginHandler load_c_plugin(const struct PluginData* plugin);
 struct PluginHandler load_binary_plugin(const struct PluginData* plugin);
 struct PluginHandler load_lua_plugin(const struct PluginData* plugin);
+struct PluginHandler load_rust_plugin(const struct PluginData* plugin);
 
 void unload_c_plugin(lua_State* state, struct PluginHandler* plugin);
 void unload_binary_plugin(lua_State* state, struct PluginHandler* unload);
 void unload_lua_plugin(lua_State* state, struct PluginHandler* unload);
+void unload_rust_plugin(lua_State* state, struct PluginHandler* unload);
 
 #endif

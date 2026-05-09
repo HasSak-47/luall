@@ -10,18 +10,21 @@ fn main() {
         .header("include/plugin_bindings.h")
         // .opaque_type("lua_State")
         .impl_debug(true)
+        .impl_partialeq(true)
         .derive_copy(true);
 
     let blocks = ["PluginData", "PluginKind"];
 
     let allows = [
         "PluginHandler",
-        "load_c_plugin",
-        "unload_c_plugin",
         "load_lua_plugin",
-        "unload_lua_plugin",
+        "load_c_plugin",
         "load_binary_plugin",
+        "load_rust_plugin",
+        "unload_lua_plugin",
+        "unload_c_plugin",
         "unload_binary_plugin",
+        "unload_rust_plugin",
     ];
 
     for allow in allows {

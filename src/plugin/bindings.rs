@@ -16,13 +16,21 @@ impl PluginHandlerWrapper {
     }
 
     pub fn load_plugin(&mut self, data: &PluginData) -> Result<()> {
-        self.handler = Some(unsafe {
-            match data.manifest.plugin.kind {
-                PluginKind::Lua => rb::load_lua_plugin((data as *const PluginData).cast()),
-                PluginKind::C => rb::load_c_plugin((data as *const PluginData).cast()),
-                PluginKind::BINARY => rb::load_binary_plugin((data as *const PluginData).cast()),
+        macro_rules! load_plugin {($($kind:path => $function:path, )+) => {
+            match data.manifest.header.kind {
+                $($kind => $function((data as *const PluginData).cast()),)+
+                #[allow(unreachable_patterns)]
                 _ => unimplemented!(),
-            }
+            }};
+        }
+
+        self.handler = Some(unsafe {
+            load_plugin!(
+                PluginKind::Lua => rb::load_lua_plugin,
+                PluginKind::C => rb::load_c_plugin,
+                PluginKind::Rust => rb::load_rust_plugin,
+                PluginKind::BINARY => rb::load_binary_plugin,
+            )
         });
 
         return Ok(());
@@ -30,24 +38,20 @@ impl PluginHandlerWrapper {
 
     pub fn unload_plugin(&mut self, lua: *mut rb::lua_State) -> Result<()> {
         if let Some(handler) = &mut self.handler {
-            unsafe {
+            macro_rules! unload_plugin { ($($kind:path => $function:path, )+) => {
                 match handler.kind {
-                    PluginKind::Lua => {
-                        rb::unload_lua_plugin(lua, handler);
-                        self.handler = None;
-                    }
-
-                    PluginKind::C => {
-                        rb::unload_c_plugin(lua, handler);
-                        self.handler = None;
-                    }
-
-                    PluginKind::BINARY => {
-                        rb::unload_binary_plugin(lua, handler);
-                        self.handler = None;
-                    }
+                    $($kind => { $function(lua, handler); self.handler = None; })+
+                    #[allow(unreachable_patterns)]
                     _ => unimplemented!(),
-                }
+                }};
+            }
+            unsafe {
+                unload_plugin!(
+                    PluginKind::Lua => rb::unload_lua_plugin,
+                    PluginKind::C => rb::unload_c_plugin,
+                    PluginKind::Rust => rb::unload_rust_plugin,
+                    PluginKind::BINARY => rb::unload_binary_plugin,
+                )
             }
         }
 

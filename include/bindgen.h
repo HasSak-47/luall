@@ -61,10 +61,6 @@ int32_t manager_load_plugin(struct PluginManager *manager_ptr,
 struct PluginData *manager_resolve_plugin(struct PluginManager *manager_ptr,
                                           const char *path);
 
-int32_t manager_unload_plugin(lua_State *lua,
-                              struct PluginManager *manager_ptr,
-                              const char *path);
-
 struct PluginManager *new_plugin_manager(void);
 
 const char *next_plugin_name(const CIteratorString *iter);
@@ -84,3 +80,7 @@ char *plugin_get_shared_object_path(const struct PluginData *plugin);
 char *plugin_get_url(struct PluginData *plugin);
 
 #endif  /* __BIND_GEN__ */
+
+int32_t manager_unload_plugin(lua_State *lua,
+                              struct PluginManager *manager_ptr,
+                              const char *path);
