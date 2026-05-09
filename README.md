@@ -20,13 +20,13 @@ It is built around a small native core and a plugin-driven frontend: terminal I/
 - `core` is a C plugin that installs the low-level runtime API into Lua.
 - `api` is a Lua plugin that builds the shell-facing API on top of `core`.
 
-The bootstrap config in [config/init.lua](./config/init.lua) loads `core://api`, which pulls in `core://core` first and then installs the frontend layer.
+The bootstrap config in [config/init.lua](./config/init.lua) loads `core://api`, which pulls in `core://runtime` first and then installs the frontend layer.
 
 ## Project Layout
 
 - [src/main.c](./src/main.c): shell loop and key decoding
 - [src/state.c](./src/state.c): Lua state setup and plugin loading
-- [plugins/core](./plugins/core): C plugin that exposes the runtime API
+- [plugins/runtime](./plugins/runtime): C plugin that exposes the runtime API
 - [plugins/api](./plugins/api): Lua plugin that owns shell behavior
 - [types/rewsh.lua](./types/rewsh.lua): Lua type stubs for the exposed API
 
@@ -87,7 +87,7 @@ The shell exposes a global `rewsh` table to Lua. Before core plugins load, it is
 
 ### Core plugins
 
-`core://core` is the low-level runtime plugin. Requiring it opens the Lua standard libraries used by the shell, creates `rewsh.core`, and installs the C-backed runtime API for:
+`core://runtime` is the low-level runtime plugin. Requiring it opens the Lua standard libraries used by the shell, creates `rewsh.core`, and installs the C-backed runtime API for:
 
 - `rewsh.core.api.process`: create commands and pipes
 - `rewsh.core.api.path`: parse and build `Path` values
@@ -95,7 +95,7 @@ The shell exposes a global `rewsh` table to Lua. Before core plugins load, it is
 - `rewsh.core.api.cd(...)`: change cwd from Lua
 - `rewsh.core.state`: mutable runtime state
 
-`core://api` is the higher-level shell plugin. It depends on `core://core`, then installs the frontend shell layer:
+`core://api` is the higher-level shell plugin. It depends on `core://runtime`, then installs the frontend shell layer:
 
 - `rewsh.api`: the shell-facing API table
 - `rewsh.api.parser`: the frontend parser

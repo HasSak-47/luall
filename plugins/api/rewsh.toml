@@ -5,5 +5,5 @@ edition = "0.1.0"
 kind = "Lua"
 
 [[dependecies]]
-name = "core"
-source = "core://core"
+name = "runtime"
+source = "core://runtime"

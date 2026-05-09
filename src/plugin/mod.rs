@@ -246,7 +246,7 @@ mod test {
 
     #[test]
     fn manifest_load() -> Result<()> {
-        let url = Url::parse("core://core")?;
+        let url = Url::parse("core://runtime")?;
         PluginData::resolve(&url)?;
         return Ok(());
     }
