@@ -42,7 +42,7 @@ int main(const int argc, const char* argv[]) {
     trigger_enter_hook();
     struct InputKey key = input_key_none();
 
-    while (state.running) {
+    while (state.is_running) {
         if (state.reload) {
             debug_printf("reloading...");
             debug_printf("running exit hooks before reload...");

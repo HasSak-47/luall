@@ -23,7 +23,7 @@ struct ShellState state = {};
  * sets the state of the shell
  */
 void init_shell_variables() {
-    state.running   = true;
+    state.is_running = true;
     char* host_temp = malloc(256);
     gethostname(host_temp, 256);
     state.vars.host = string_from_cstr(host_temp);
@@ -130,16 +130,37 @@ static int lua_plugin_api_load(lua_State* L) {
     return 0;
 }
 
-static int lua_plugin_api_setup(lua_State* L) {
-    const char* path = lua_tostring(L, 1);
-    if (!manager_is_plugin_loaded(state.manager, path)) {
-        manager_load_plugin(state.manager, path);
-    }
-    struct PluginData* d     = get_plugin(state.manager, path);
-    struct PluginHandler* h  = get_plugin_handler(d);
-    h->setup_table_reference = luaL_ref(L, LUA_REGISTRYINDEX);
+static int push_plugin_config(lua_State* L, const char* path, int opts_idx) {
+    if (!lua_isnoneornil(L, opts_idx)) {
+        if (!lua_istable(L, opts_idx)) {
+            return luaL_error(L, "plugin require opts must be a table or nil");
+        }
 
-    return 0;
+        lua_pushvalue(L, opts_idx);
+        return 1;
+    }
+
+    lua_getglobal(L, "rewsh");
+    lua_getfield(L, -1, "plugin");
+    lua_getfield(L, -1, "config");
+    lua_pushstring(L, path);
+    lua_gettable(L, -2);
+    lua_remove(L, -2);
+    lua_remove(L, -2);
+    lua_remove(L, -2);
+
+    if (lua_isnil(L, -1)) {
+        lua_pop(L, 1);
+        lua_newtable(L);
+        return 1;
+    }
+
+    if (!lua_istable(L, -1)) {
+        return luaL_error(L, "plugin config for '%s' must be a table or nil",
+            path);
+    }
+
+    return 1;
 }
 
 static int package_append_path(
@@ -409,12 +430,7 @@ static int lua_plugin_api_require(lua_State* L) {
     switch (plugin_get_kind(d)) {
     case PLUGIN_KIND_C:
     case PLUGIN_KIND_BINARY:
-        if (h->setup_table_reference != 0) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, h->setup_table_reference);
-        }
-        else {
-            lua_newtable(L);
-        }
+        push_plugin_config(L, path, 2);
         h->setup(L);
         break;
 
@@ -456,12 +472,7 @@ static int lua_plugin_api_require(lua_State* L) {
 
         lua_getfield(L, -1, "setup");
         if (lua_isfunction(L, -1)) {
-            if (h->setup_table_reference != 0) {
-                lua_rawgeti(L, LUA_REGISTRYINDEX, h->setup_table_reference);
-            }
-            else {
-                lua_newtable(L);
-            }
+            push_plugin_config(L, path, 2);
 
             if (lua_pcall(L, 1, 1, 0) != LUA_OK) {
                 return lua_error(L);
@@ -505,9 +516,6 @@ void init_plugin_table() {
     lua_pushcfunction(state.L, lua_plugin_api_resolve);
     lua_setfield(state.L, -2, "resolve");
 
-    lua_pushcfunction(state.L, lua_plugin_api_setup);
-    lua_setfield(state.L, -2, "setup");
-
     lua_pushcfunction(state.L, lua_plugin_api_load);
     lua_setfield(state.L, -2, "load");
 
@@ -516,6 +524,9 @@ void init_plugin_table() {
 
     lua_pushcfunction(state.L, lua_plugin_api_destroy);
     lua_setfield(state.L, -2, "destroy");
+
+    lua_newtable(state.L);
+    lua_setfield(state.L, -2, "config");
 }
 
 /**

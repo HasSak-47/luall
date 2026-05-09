@@ -41,7 +41,7 @@ local function handle_input(input)
     if input.kind == "letter" then
         if input.ctrl then
             if input.letter == "c" then
-                rewsh.state.running = false
+                rewsh.core.state.is_running = false
             end
             return
         end

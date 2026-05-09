@@ -62,7 +62,7 @@ struct ShellState {
     struct VectorHook hooks;
 
     struct PluginManager* manager;
-    bool running;
+    bool is_running;
     bool reload;
     lua_State* L;
 };

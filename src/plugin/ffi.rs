@@ -20,7 +20,7 @@ pub extern "C" fn plugin_get_name(plugin: *const PluginData) -> *mut c_char {
 pub extern "C" fn plugin_get_cache_path(plugin: *const PluginData) -> *mut c_char {
     let plugin = unsafe { &*plugin };
 
-    let s = CString::new(plugin.cache_location.to_str().unwrap()).unwrap();
+    let s = CString::new(plugin.artifact_path.to_str().unwrap()).unwrap();
 
     return s.into_raw();
 }
@@ -30,7 +30,7 @@ pub extern "C" fn plugin_get_cache_path(plugin: *const PluginData) -> *mut c_cha
 pub extern "C" fn plugin_get_data_path(plugin: *const PluginData) -> *mut c_char {
     let plugin = unsafe { &*plugin };
 
-    let s = CString::new(plugin.data_location.to_str().unwrap()).unwrap();
+    let s = CString::new(plugin.root_path.to_str().unwrap()).unwrap();
 
     return s.into_raw();
 }
@@ -137,7 +137,7 @@ pub extern "C" fn plugin_get_kind(plugin: *mut PluginData) -> PluginKind {
 #[allow(unused)]
 #[unsafe(no_mangle)]
 pub extern "C" fn plugin_get_url(plugin: *mut PluginData) -> *mut c_char {
-    let cstr = CString::new(unsafe { &*plugin }.location.as_str()).unwrap();
+    let cstr = CString::new(unsafe { &*plugin }.source_url.as_str()).unwrap();
     return cstr.into_raw();
 }
 

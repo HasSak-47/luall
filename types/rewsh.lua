@@ -3,11 +3,12 @@
 ---@class RewshPluginData
 
 ---@class RewshPluginExports: table
+---@alias RewshPluginConfig table<string, table>
 
 ---@class RewshPluginApi
 ---@field resolve fun(url: string): RewshPluginData|nil
 ---@field load fun(url: string): RewshPluginData|nil
----@field setup fun(url: string, opts: table|nil): RewshPluginData|nil
+---@field config RewshPluginConfig
 ---@field require fun(url: string, opts: table|nil): RewshPluginExports
 ---@field destroy fun(url: string): nil
 
@@ -24,7 +25,7 @@
 ---@field user RewshStateVarsUser
 
 ---@class RewshState
----@field running boolean
+---@field is_running boolean
 ---@field reload boolean
 ---@field vars RewshStateVars
 

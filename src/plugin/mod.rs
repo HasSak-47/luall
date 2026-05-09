@@ -71,7 +71,7 @@ pub struct Manifest {
 /// cbindgen:prefix-with-name
 /// cbindgen:rename-all=SCREAMING_SNAKE_CASE
 #[derive(Debug, Default)]
-pub enum LocationKind {
+pub enum SourceKind {
     CORE,
     PATH,
     #[default]
@@ -81,15 +81,15 @@ pub enum LocationKind {
 #[derive(Debug)]
 pub struct PluginData {
     pub manifest: Manifest,
-    pub kind: LocationKind,
-    pub location: url::Url,
+    pub kind: SourceKind,
+    pub source_url: url::Url,
     // core plugins are at CORE_PLUGIN_PATH/*
     // path plugins are at the specified path
     // git plugins are stored into: $STATE_PATH/rewsh/plugins/{name}
 
     // binary cache is at $STATE_PATH/rewsh/cache/{name}.so
-    pub data_location: PathBuf,
-    pub cache_location: PathBuf,
+    pub root_path: PathBuf,
+    pub artifact_path: PathBuf,
     pub handler: PluginHandlerWrapper,
 }
 
@@ -110,11 +110,11 @@ impl PluginData {
         let cache_path = PathBuf::from(&format!("./.ignore/cache/{}", manifest.plugin.name));
 
         return Ok(PluginData {
-            location,
+            source_url: location,
             manifest,
-            kind: LocationKind::PATH,
-            data_location: plugin_path,
-            cache_location: cache_path,
+            kind: SourceKind::PATH,
+            root_path: plugin_path,
+            artifact_path: cache_path,
             handler: PluginHandlerWrapper::default(),
         });
     }
@@ -136,11 +136,11 @@ impl PluginData {
         let cache_path = PathBuf::from(&format!("./.ignore/cache/{}", manifest.plugin.name));
 
         return Ok(PluginData {
-            location,
+            source_url: location,
             manifest,
-            kind: LocationKind::CORE,
-            data_location: plugin_path,
-            cache_location: cache_path,
+            kind: SourceKind::CORE,
+            root_path: plugin_path,
+            artifact_path: cache_path,
             handler: PluginHandlerWrapper::default(),
         });
     }

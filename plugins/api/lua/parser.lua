@@ -196,7 +196,7 @@ local function run_cmd(process)
     local name, args = build_command(process)
 
     if name == "exit" then
-        rewsh.core.state.running = false
+        rewsh.core.state.is_running = false
         rewsh.core.state.vars.error = 0
         return
     end

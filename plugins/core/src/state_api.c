@@ -110,8 +110,8 @@ int index_state_vars(lua_State* L) {
 
 int index_state(lua_State* L) {
     const char* name = lua_tostring(L, -1);
-    if (strcmp(name, "running") == 0) {
-        lua_pushboolean(L, state.running);
+    if (strcmp(name, "is_running") == 0) {
+        lua_pushboolean(L, state.is_running);
     }
     else if (strcmp(name, "reload") == 0) {
         lua_pushboolean(L, state.reload);
@@ -129,8 +129,8 @@ int index_state(lua_State* L) {
 
 int newindex_state(lua_State* L) {
     const char* name = lua_tostring(L, 2);
-    if (strcmp(name, "running") == 0) {
-        state.running = lua_toboolean(L, 3);
+    if (strcmp(name, "is_running") == 0) {
+        state.is_running = lua_toboolean(L, 3);
     }
     else if (strcmp(name, "reload") == 0) {
         state.reload = lua_toboolean(L, 3);
