@@ -18,10 +18,10 @@
 #include "ly_string.h"
 #include "path.h"
 
-#define LUA_STATE_MT "rewsh.state"
-#define LUA_STATE_VARS_MT "rewsh.state.vars"
-#define LUA_STATE_VARS_USER_MT "rewsh.state.vars.user"
-#define LUA_STATE_VARS_ENV_MT "rewsh.state.vars.env"
+#define LUA_STATE_MT "lyra.state"
+#define LUA_STATE_VARS_MT "lyra.state.vars"
+#define LUA_STATE_VARS_USER_MT "lyra.state.vars.user"
+#define LUA_STATE_VARS_ENV_MT "lyra.state.vars.env"
 
 static struct Path* check_path(lua_State* L, int idx) {
     return (struct Path*)luaL_checkudata(L, idx, LUA_PATH_MT);
@@ -249,7 +249,7 @@ void state_setup_lua_api(lua_State* L) {
     create_state_vars_user_metatable(L);
     create_state_vars_env_metatable(L);
 
-    lua_getglobal(L, "rewsh");
+    lua_getglobal(L, "lyra");
 
     // "temporal" hacky api extensions
     // shit is even more temporal than imagined

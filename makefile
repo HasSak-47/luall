@@ -18,12 +18,12 @@ OBJ_DIR := .ignore/build
 
 SRCS := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/state/*.c)
 
-OUT_RUST_LIB := $(OBJ_DIR)/librewsh.so 
-SRC_RUST_LIB := target/release/librewsh.so
+OUT_RUST_LIB := $(OBJ_DIR)/liblyra.so 
+SRC_RUST_LIB := target/release/liblyra.so
 
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS)) $(OUT_RUST_LIB)
 
-OUT := rewsh
+OUT := lyra
 
 CC := gcc
 CFLAGS := -g -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
@@ -64,6 +64,7 @@ test: clean build
 	cargo test
 
 clean:
+	cargo clean
 	rm -f $(OBJS)
 
 clean_all: clean

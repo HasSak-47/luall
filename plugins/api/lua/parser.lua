@@ -13,22 +13,22 @@ local redir_set = setify_table({ "<", "<<", ">", ">>" })
 local fd_set = setify_table({ "&0", "&1", "&2" })
 
 ---@param path string
----@return RewshPath
+---@return LyraPath
 local function expand_front_path(path)
-    return rewsh.api.expand_path(path)
+    return lyra.api.expand_path(path)
 end
 
----@class RewshFrontToken
+---@class LyraFrontToken
 ---@field span integer[]
 ---@field val string
 ---@field type string
 
----@class RewshFrontProcess
----@field val RewshFrontToken[]
+---@class LyraFrontProcess
+---@field val LyraFrontToken[]
 ---@field type string
 
----@param tokens RewshFrontToken[]
----@return RewshFrontProcess
+---@param tokens LyraFrontToken[]
+---@return LyraFrontProcess
 local function take_process(tokens)
     local limit = 0
     for index, token in ipairs(tokens) do
@@ -148,7 +148,7 @@ local function resolve_command(name)
         return expand_front_path(name):to_string()
     end
 
-    local path_env = rewsh.core.state.vars.env.PATH
+    local path_env = lyra.core.state.vars.env.PATH
     for _, path in ipairs(parse_env_path(path_env)) do
         local candidate = path .. "/" .. name
         local handle = io.open(candidate, "r")
@@ -161,7 +161,7 @@ local function resolve_command(name)
     return name
 end
 
----@param process RewshFrontProcess
+---@param process LyraFrontProcess
 ---@return string, string[]
 local function build_command(process)
     local name = table.remove(process.val, 1).val
@@ -178,7 +178,7 @@ end
 ---@return nil
 local function run_external(name, args)
     local target = resolve_command(name)
-    local command = rewsh.api.process.command(target)
+    local command = lyra.api.process.command(target)
     command:reserve_size(#args + 1)
 
     for _, arg in ipairs(args) do
@@ -187,28 +187,28 @@ local function run_external(name, args)
 
     command:run()
     local status = command:wait()
-    rewsh.vars.error = status
+    lyra.vars.error = status
 end
 
----@param process RewshFrontProcess
+---@param process LyraFrontProcess
 ---@return nil
 local function run_cmd(process)
     local name, args = build_command(process)
 
     if name == "exit" then
-        rewsh.core.state.is_running = false
-        rewsh.core.state.vars.error = 0
+        lyra.core.state.is_running = false
+        lyra.core.state.vars.error = 0
         return
     end
 
     if name == "reload" then
-        rewsh.core.state.reload = true
-        rewsh.core.state.vars.error = 0
+        lyra.core.state.reload = true
+        lyra.core.state.vars.error = 0
         return
     end
 
-    if rewsh.api.builtin[name] then
-        rewsh.api.builtin[name](args)
+    if lyra.api.builtin[name] then
+        lyra.api.builtin[name](args)
         return
     end
 
@@ -221,22 +221,22 @@ local function run_piped(tokens)
     local src_name, src_args = build_command(tokens[1])
     local out_name, out_args = build_command(tokens[3])
 
-    local src = rewsh.api.process.command(resolve_command(src_name))
+    local src = lyra.api.process.command(resolve_command(src_name))
     src:reserve_size(#src_args + 1)
     for _, arg in ipairs(src_args) do
         src:add_arg(arg)
     end
 
-    local out = rewsh.api.process.command(resolve_command(out_name))
+    local out = lyra.api.process.command(resolve_command(out_name))
     out:reserve_size(#out_args + 1)
     for _, arg in ipairs(out_args) do
         out:add_arg(arg)
     end
 
-    local pipe = rewsh.api.process.pipe()
+    local pipe = lyra.api.process.pipe()
     src:bind_pipe(pipe, "write")
     if tokens[2].val == "|&" then
-        src:bind_pipe(pipe, rewsh.api.process.WRITE + rewsh.api.process.ERROR)
+        src:bind_pipe(pipe, lyra.api.process.WRITE + lyra.api.process.ERROR)
     end
     out:bind_pipe(pipe, "read")
 
@@ -246,7 +246,7 @@ local function run_piped(tokens)
 
     local src_status = src:wait()
     local out_status = out:wait()
-    rewsh.state.vars.error = out_status ~= 0 and out_status or src_status
+    lyra.state.vars.error = out_status ~= 0 and out_status or src_status
 end
 
 ---@param line string
@@ -265,7 +265,7 @@ end
 local function handle_singleline(line)
     local start = line:find("lua", 1, true)
     if start == 1 then
-        rewsh.api.lua({ line:gsub("^lua%s*", "", 1) })
+        lyra.api.lua({ line:gsub("^lua%s*", "", 1) })
     else
         handle_shell_like(line)
     end
@@ -275,14 +275,14 @@ end
 ---@return nil
 local function parse(input)
     if input == nil or input == "" then
-        rewsh.vars.error = 0
+        lyra.vars.error = 0
         return
     end
 
     local set_debug = input:sub(1, 1) == "!"
     if set_debug then
         input = input:sub(2)
-        rewsh.vars.debug = true
+        lyra.vars.debug = true
     end
 
     local lines = {}
@@ -297,7 +297,7 @@ local function parse(input)
     end
 
     if set_debug then
-        rewsh.vars.debug = false
+        lyra.vars.debug = false
     end
 end
 

@@ -2,23 +2,23 @@ local parser = require("api.parser")
 
 ---@return string
 local function home_string()
-    return rewsh.core.state.vars.user.home:to_string()
+    return lyra.core.state.vars.user.home:to_string()
 end
 
 ---@param path string|nil
----@return RewshPath
+---@return LyraPath
 local function expand_path(path)
     if path == nil or path == "" then
         path = "."
     end
 
-    local parsed = rewsh.api.path.parse(path)
-    parsed:expand_path(rewsh.vars.cwd)
+    local parsed = lyra.api.path.parse(path)
+    parsed:expand_path(lyra.vars.cwd)
     return parsed
 end
 
 
----@param path RewshPath
+---@param path LyraPath
 ---@return string
 local function format_path(path)
     local path_string = path:to_string()
@@ -50,16 +50,16 @@ end
 local function prompt()
     local ok, value = pcall(function()
         local err = ""
-        if rewsh.vars.error ~= 0 then
-            err = " [" .. rewsh.vars.error .. "]"
+        if lyra.vars.error ~= 0 then
+            err = " [" .. lyra.vars.error .. "]"
         end
 
         local debug_prefix = ""
-        if rewsh.vars.debug then
+        if lyra.vars.debug then
             debug_prefix = "[DEBUG]"
         end
 
-        local cwd = format_path(rewsh.vars.cwd)
+        local cwd = format_path(lyra.vars.cwd)
         if cwd == nil then
             cwd = 'FAILED FORMAT'
         end
@@ -72,7 +72,7 @@ local function prompt()
             return full_color(r, g, b) .. text .. reset_color()
         end
 
-        return debug_prefix .. "rewsh " .. color_text(cwd, 32, 255, 64) .. err
+        return debug_prefix .. "lyra " .. color_text(cwd, 32, 255, 64) .. err
             .. color_text(">", 255, 255, 128)
     end)
 
@@ -81,7 +81,7 @@ end
 
 ---@return nil
 local function render_input(data, index)
-    local line = "\r" .. rewsh.api.prompt() .. data
+    local line = "\r" .. lyra.api.prompt() .. data
     io.stdout:write(line)
     io.stdout:write("\27[K")
 
@@ -96,7 +96,7 @@ end
 ---@return nil
 ---@return nil
 local function setup_extension_namespace()
-    rewsh.api = setmetatable({
+    lyra.api = setmetatable({
         parser = parser,
         render_input = render_input,
         expand_path = expand_path,
@@ -109,12 +109,12 @@ local function setup_extension_namespace()
             cd = function(args)
                 local target = nil
                 if args == nil or #args == 0 then
-                    target = rewsh.state.vars.user.home
+                    target = lyra.state.vars.user.home
                 else
                     target = expand_path(args[1])
                 end
 
-                local ok, err = rewsh.core.api.cd(target)
+                local ok, err = lyra.core.api.cd(target)
                 if not ok and err ~= nil then
                     print(err)
                 end
@@ -134,13 +134,13 @@ local function setup_extension_namespace()
                 end
             end,
         }
-    }, { __index = rewsh.core.api })
-    rewsh.vars = setmetatable({}, {
+    }, { __index = lyra.core.api })
+    lyra.vars = setmetatable({}, {
         __index = function(_, name)
-            return rewsh.core.state.vars[name]
+            return lyra.core.state.vars[name]
         end,
         __newindex = function(_, name, val)
-            rewsh.core.state.vars[name] = val
+            lyra.core.state.vars[name] = val
         end,
     })
 end

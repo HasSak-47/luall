@@ -1,6 +1,6 @@
-# rewsh
+# Lyra
 
-`rewsh` is an interactive Linux shell written in C with an embedded Lua runtime.
+`lyra` is an interactive Linux shell written in C with an embedded Lua runtime.
 It is built around a small native core and a plugin-driven frontend: terminal I/O, process execution, userdata, and plugin loading live in the core, while prompt rendering, input handling, and parsing live in plugins.
 
 ## Highlights
@@ -28,7 +28,7 @@ The bootstrap config in [config/init.lua](./config/init.lua) loads `core://api`,
 - [src/state.c](./src/state.c): Lua state setup and plugin loading
 - [plugins/runtime](./plugins/runtime): C plugin that exposes the runtime API
 - [plugins/api](./plugins/api): Lua plugin that owns shell behavior
-- [types/rewsh.lua](./types/rewsh.lua): Lua type stubs for the exposed API
+- [types/lyra.lua](./types/lyra.lua): Lua type stubs for the exposed API
 
 ## Building
 
@@ -48,11 +48,11 @@ The bootstrap config in [config/init.lua](./config/init.lua) loads `core://api`,
 - Clean: `make clean`
 - Test build with `LY_TEST`: `make test`
 
-The main binary is `./rewsh`.
+The main binary is `./lyra`.
 
 ## Plugin Model
 
-Each plugin has a `rewsh.toml` manifest and is addressed by URL.
+Each plugin has a `lyra.toml` manifest and is addressed by URL.
 
 - `core://name` currently resolves to `./plugins/name`
 - `path:///foo/bar` resolves to `/foo/bar`
@@ -77,33 +77,33 @@ Plugin-local Lua modules are private to the plugin that owns them. A plugin can 
 
 ## Runtime API
 
-The shell exposes a global `rewsh` table to Lua. Before core plugins load, it is mostly a bootstrap surface for plugin management.
+The shell exposes a global `lyra` table to Lua. Before core plugins load, it is mostly a bootstrap surface for plugin management.
 
-- `rewsh.plugin.resolve(url)`
-- `rewsh.plugin.load(url)`
-- `rewsh.plugin.setup(url, opts?)`
-- `rewsh.plugin.require(url, opts?)`
-- `rewsh.plugin.destroy(url)`
+- `lyra.plugin.resolve(url)`
+- `lyra.plugin.load(url)`
+- `lyra.plugin.setup(url, opts?)`
+- `lyra.plugin.require(url, opts?)`
+- `lyra.plugin.destroy(url)`
 
 ### Core plugins
 
-`core://runtime` is the low-level runtime plugin. Requiring it opens the Lua standard libraries used by the shell, creates `rewsh.core`, and installs the C-backed runtime API for:
+`core://runtime` is the low-level runtime plugin. Requiring it opens the Lua standard libraries used by the shell, creates `lyra.core`, and installs the C-backed runtime API for:
 
-- `rewsh.core.api.process`: create commands and pipes
-- `rewsh.core.api.path`: parse and build `Path` values
-- `rewsh.core.api.on_event(...)`: bind enter/exit/key_input hooks
-- `rewsh.core.api.cd(...)`: change cwd from Lua
-- `rewsh.core.state`: mutable runtime state
+- `lyra.core.api.process`: create commands and pipes
+- `lyra.core.api.path`: parse and build `Path` values
+- `lyra.core.api.on_event(...)`: bind enter/exit/key_input hooks
+- `lyra.core.api.cd(...)`: change cwd from Lua
+- `lyra.core.state`: mutable runtime state
 
 `core://api` is the higher-level shell plugin. It depends on `core://runtime`, then installs the frontend shell layer:
 
-- `rewsh.api`: the shell-facing API table
-- `rewsh.api.parser`: the frontend parser
-- `rewsh.api.prompt(...)` and `rewsh.api.render_input(...)`: prompt and input rendering helpers
-- `rewsh.api.expand_path(...)` and `rewsh.api.format_path(...)`: path helpers built on top of `rewsh.core`
-- `rewsh.vars`: a Lua-facing view over `rewsh.core.state.vars`
+- `lyra.api`: the shell-facing API table
+- `lyra.api.parser`: the frontend parser
+- `lyra.api.prompt(...)` and `lyra.api.render_input(...)`: prompt and input rendering helpers
+- `lyra.api.expand_path(...)` and `lyra.api.format_path(...)`: path helpers built on top of `lyra.core`
+- `lyra.vars`: a Lua-facing view over `lyra.core.state.vars`
 
-`rewsh.api` falls back to `rewsh.core.api`, so higher-level helpers and lower-level runtime primitives are available through the same frontend namespace.
+`lyra.api` falls back to `lyra.core.api`, so higher-level helpers and lower-level runtime primitives are available through the same frontend namespace.
 
 ## Current Limitations
 
@@ -119,7 +119,7 @@ The shell exposes a global `rewsh` table to Lua. Before core plugins load, it is
 ## Notes
 
 - `Ctrl+C` handling is still primitive and not yet shell-like.
-- Reload behavior exists through `rewsh.state.reload`, but this codebase is still in active transition and not hardened.
+- Reload behavior exists through `lyra.state.reload`, but this codebase is still in active transition and not hardened.
 
 ## Foot Guns
 

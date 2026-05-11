@@ -8,8 +8,8 @@
 #include "ly_string.h"
 #include "process.h"
 
-#define LUA_COMMAND_MT "rewsh.core.api.process.command"
-#define LUA_PIPE_MT "rewsh.core.api.process.pipe"
+#define LUA_COMMAND_MT "lyra.core.api.process.command"
+#define LUA_PIPE_MT "lyra.core.api.process.pipe"
 
 static struct Command* check_command(lua_State* L, int idx) {
     return (struct Command*)luaL_checkudata(L, idx, LUA_COMMAND_MT);
@@ -250,7 +250,7 @@ void process_setup_lua_api(lua_State* L) {
     create_command_metatable(L);
     create_pipe_metatable(L);
 
-    lua_getglobal(L, "rewsh");
+    lua_getglobal(L, "lyra");
 
     lua_getfield(L, -1, "core");
     lua_getfield(L, -1, "api");

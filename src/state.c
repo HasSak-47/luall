@@ -140,7 +140,7 @@ static int push_plugin_config(lua_State* L, const char* path, int opts_idx) {
         return 1;
     }
 
-    lua_getglobal(L, "rewsh");
+    lua_getglobal(L, "lyra");
     lua_getfield(L, -1, "plugin");
     lua_getfield(L, -1, "config");
     lua_pushstring(L, path);
@@ -343,12 +343,12 @@ static int register_plugin_namespace_searcher(
         return luaL_error(L, "package table is not available");
     }
 
-    lua_getfield(L, -1, "_rewsh_plugin_namespaces");
+    lua_getfield(L, -1, "_lyra_plugin_namespaces");
     if (lua_isnil(L, -1)) {
         lua_pop(L, 1);
         lua_newtable(L);
         lua_pushvalue(L, -1);
-        lua_setfield(L, -3, "_rewsh_plugin_namespaces");
+        lua_setfield(L, -3, "_lyra_plugin_namespaces");
     }
 
     lua_getfield(L, -1, plugin_name);
@@ -544,7 +544,7 @@ void init_shell_state() {
     lua_pushlightuserdata(state.L, &state);
     lua_setfield(state.L, -2, "state");
 
-    lua_setglobal(state.L, "rewsh");
+    lua_setglobal(state.L, "lyra");
 
     init_shell_variables();
     init_shell_config();

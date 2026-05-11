@@ -126,9 +126,9 @@ pub struct PluginData {
     pub source: url::Url,
     // core plugins are at CORE_PLUGIN_PATH/*
     // path plugins are at the specified path
-    // git plugins are stored into: $STATE_PATH/rewsh/plugins/{name}
+    // git plugins are stored into: $STATE_PATH/lyra/plugins/{name}
 
-    // binary cache is at $STATE_PATH/rewsh/cache/{name}.so
+    // binary cache is at $STATE_PATH/lyra/cache/{name}.so
     pub root_path: PathBuf,
     pub artifact_path: PathBuf,
     pub handler: PluginHandlerWrapper,
@@ -149,7 +149,7 @@ const STATE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
         PathBuf::from(".ignore/cache")
     } else {
         let mut state = dirs::state_dir().unwrap();
-        state.push("rewsh");
+        state.push("lyra");
         state
     }
 });
@@ -161,7 +161,7 @@ impl PluginData {
         kind: SourceKind,
     ) -> Result<PluginData> {
         let mut manifest_path = root_path.clone();
-        manifest_path.push("rewsh");
+        manifest_path.push("lyra");
         manifest_path.set_extension("toml");
 
         let mut buf = String::new();

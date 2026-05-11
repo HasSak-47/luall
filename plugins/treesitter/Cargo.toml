@@ -8,7 +8,7 @@ anyhow = "1.0.102"
 mlua = { version = "0.11.6", features = ["lua55", "anyhow"] }
 tree-sitter = "0.26.8"
 tree-sitter-highlight = "0.26.8"
-tree-sitter-rewsh-script = {
+tree-sitter-lyra-script = {
     branch="main",
-    git="https://github.com/HasSak-47/tree-sitter-rewsh_script.git",
+    git="https://github.com/HasSak-47/tree-sitter-lyra_script.git",
 }

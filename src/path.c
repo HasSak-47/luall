@@ -328,7 +328,7 @@ TEST(path_clonning) {
 }
 
 TEST(path_mkdir_p_creates_nested_dirs) {
-    char dir_template[] = "/tmp/rewsh-path-test-XXXXXX";
+    char dir_template[] = "/tmp/lyra-path-test-XXXXXX";
     char* root          = mkdtemp(dir_template);
     ASSERT(root != NULL, "failed to create temporary root directory");
 

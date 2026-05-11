@@ -1,5 +1,5 @@
-rewsh.plugin.require("core://parser")
-rewsh.plugin.require("core://api")
+lyra.plugin.require("core://parser")
+lyra.plugin.require("core://api")
 
 local input_state = {
     history = {
@@ -14,10 +14,10 @@ local input_state = {
 local function submit_input()
     local line = input_state.data
 
-    io.stdout:write("\r" .. rewsh.api.prompt() .. line .. "\n")
+    io.stdout:write("\r" .. lyra.api.prompt() .. line .. "\n")
 
     if line ~= "" then
-        local ok, err = pcall(rewsh.api.parser.parse, line)
+        local ok, err = pcall(lyra.api.parser.parse, line)
         if not ok then
             print('failed to parse', err)
             return
@@ -36,13 +36,13 @@ local function submit_input()
 end
 
 
----@param input RewshInputKey
+---@param input LyraInputKey
 ---@return nil
 local function handle_input(input)
     if input.kind == "letter" then
         if input.ctrl then
             if input.letter == "c" then
-                rewsh.core.state.is_running = false
+                lyra.core.state.is_running = false
             end
             return
         end
@@ -81,7 +81,7 @@ local function handle_input(input)
 
             local available = #history.history
             if available == 0 then
-                rewsh.api.render_input(input_state.data, input_state.index)
+                lyra.api.render_input(input_state.data, input_state.index)
                 return
             end
 
@@ -96,7 +96,7 @@ local function handle_input(input)
         elseif input.special == "down" then
             local history = input_state.history
             if history.index == 0 then
-                rewsh.api.render_input(input_state.data, input_state.index)
+                lyra.api.render_input(input_state.data, input_state.index)
                 return
             end
 
@@ -112,12 +112,12 @@ local function handle_input(input)
         end
     end
 
-    rewsh.api.render_input(input_state.data, input_state.index)
+    lyra.api.render_input(input_state.data, input_state.index)
 end
 
-rewsh.api.on_event("enter", rewsh.api.set_raw_mode)
-rewsh.api.on_event("exit", rewsh.api.unset_raw_mode)
-rewsh.api.on_event("enter", function()
-    rewsh.api.render_input(input_state.data, input_state.index)
+lyra.api.on_event("enter", lyra.api.set_raw_mode)
+lyra.api.on_event("exit", lyra.api.unset_raw_mode)
+lyra.api.on_event("enter", function()
+    lyra.api.render_input(input_state.data, input_state.index)
 end)
-rewsh.api.on_event("key_input", handle_input)
+lyra.api.on_event("key_input", handle_input)

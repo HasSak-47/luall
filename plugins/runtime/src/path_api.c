@@ -134,7 +134,7 @@ void create_path_module(lua_State* L) {
 void path_setup_lua_api(lua_State* L) {
     create_path_metatable(L);
 
-    lua_getglobal(L, "rewsh");
+    lua_getglobal(L, "lyra");
     lua_getfield(L, -1, "core");
     lua_getfield(L, -1, "api");
 

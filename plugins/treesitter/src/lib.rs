@@ -1,7 +1,7 @@
 use mlua::ffi::lua_State;
 use tree_sitter::{InputEdit, Language, Parser, Point};
 use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
-use tree_sitter_rewsh_script::{HIGHLIGHTS_QUERY, LANGUAGE, LOCALS_QUERY};
+use tree_sitter_lyra_script::{HIGHLIGHTS_QUERY, LANGUAGE, LOCALS_QUERY};
 
 #[allow(nonstandard_style)]
 #[repr(C)]
@@ -35,7 +35,7 @@ impl TSHanlder {
         let highlighter = Highlighter::new();
         let hl_config = HighlightConfiguration::new(
             lang.clone(),
-            "rewsh-script",
+            "lyra-script",
             HIGHLIGHTS_QUERY,
             "",
             LOCALS_QUERY,

@@ -7,7 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define LUA_INPUT_KEY_MT "rewsh.input_key"
+#define LUA_INPUT_KEY_MT "lyra.input_key"
 
 static const char* input_key_kind_name(enum InputKeyKind kind) {
     switch (kind) {

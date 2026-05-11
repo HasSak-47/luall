@@ -31,10 +31,10 @@ int add_lua_event(lua_State* L) {
 }
 
 void event_setup_lua_api(lua_State* L) {
-    lua_getglobal(L, "rewsh");
+    lua_getglobal(L, "lyra");
     if (!lua_istable(L, -1)) {
         lua_pop(L, 1);
-        luaL_error(L, "global 'rewsh' does not exist or is not a table");
+        luaL_error(L, "global 'lyra' does not exist or is not a table");
         return;
     }
 

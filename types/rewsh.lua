@@ -1,105 +1,105 @@
 ---@meta
 
----@class RewshPluginData
+---@class LyraPluginData
 
----@class RewshPluginExports: table
----@alias RewshPluginConfig table<string, table>
+---@class LyraPluginExports: table
+---@alias LyraPluginConfig table<string, table>
 
----@class RewshPluginApi
----@field resolve fun(url: string): RewshPluginData|nil
----@field load fun(url: string): RewshPluginData|nil
----@field config RewshPluginConfig
----@field require fun(url: string, opts: table|nil): RewshPluginExports
+---@class LyraPluginApi
+---@field resolve fun(url: string): LyraPluginData|nil
+---@field load fun(url: string): LyraPluginData|nil
+---@field config LyraPluginConfig
+---@field require fun(url: string, opts: table|nil): LyraPluginExports
 ---@field destroy fun(url: string): nil
 
----@class RewshStateVarsUser
----@field home RewshPath
+---@class LyraStateVarsUser
+---@field home LyraPath
 ---@field name string
 
----@class RewshStateVars
+---@class LyraStateVars
 ---@field error integer
 ---@field debug boolean
 ---@field env table<string, string>
----@field cwd RewshPath
+---@field cwd LyraPath
 ---@field host string
----@field user RewshStateVarsUser
+---@field user LyraStateVarsUser
 
----@class RewshState
+---@class LyraState
 ---@field is_running boolean
 ---@field reload boolean
----@field vars RewshStateVars
+---@field vars LyraStateVars
 
----@class RewshPath
----@field push fun(self: RewshPath, name: string)
----@field pop fun(self: RewshPath)
----@field to_string fun(self: RewshPath): string
----@field path_is_dir fun(self: RewshPath): boolean
----@field expand_path fun(self: RewshPath, cwd: RewshPath)
----@field get_childs fun(self: RewshPath): RewshPath[]
----@field get_name fun(self: RewshPath): string
+---@class LyraPath
+---@field push fun(self: LyraPath, name: string)
+---@field pop fun(self: LyraPath)
+---@field to_string fun(self: LyraPath): string
+---@field path_is_dir fun(self: LyraPath): boolean
+---@field expand_path fun(self: LyraPath, cwd: LyraPath)
+---@field get_childs fun(self: LyraPath): LyraPath[]
+---@field get_name fun(self: LyraPath): string
 
----@class RewshPathApi
----@field new fun(): RewshPath
----@field parse fun(path: string): RewshPath
+---@class LyraPathApi
+---@field new fun(): LyraPath
+---@field parse fun(path: string): LyraPath
 
----@class RewshCommand
----@field add_arg fun(self: RewshCommand, arg: string)
----@field bind_pipe fun(self: RewshCommand, pipe: RewshPipe, bind: integer|string)
----@field reserve_size fun(self: RewshCommand, size: integer)
----@field run fun(self: RewshCommand): integer
----@field set_foreground fun(self: RewshCommand, foreground: boolean)
----@field get_foreground fun(self: RewshCommand): boolean
----@field wait fun(self: RewshCommand): integer
+---@class LyraCommand
+---@field add_arg fun(self: LyraCommand, arg: string)
+---@field bind_pipe fun(self: LyraCommand, pipe: LyraPipe, bind: integer|string)
+---@field reserve_size fun(self: LyraCommand, size: integer)
+---@field run fun(self: LyraCommand): integer
+---@field set_foreground fun(self: LyraCommand, foreground: boolean)
+---@field get_foreground fun(self: LyraCommand): boolean
+---@field wait fun(self: LyraCommand): integer
 
----@class RewshPipe
----@field close fun(self: RewshPipe)
----@field read fun(self: RewshPipe): string
----@field write fun(self: RewshPipe, data: string)
+---@class LyraPipe
+---@field close fun(self: LyraPipe)
+---@field read fun(self: LyraPipe): string
+---@field write fun(self: LyraPipe, data: string)
 
----@class RewshProcessApi
----@field command fun(path: string): RewshCommand
----@field pipe fun(): RewshPipe
+---@class LyraProcessApi
+---@field command fun(path: string): LyraCommand
+---@field pipe fun(): LyraPipe
 ---@field wait fun(pid: integer): integer
 ---@field NONE integer
 ---@field READ integer
 ---@field WRITE integer
 ---@field ERROR integer
 
----@alias RewshInputKeyKind "none"|"letter"|"modifier"|"special"
----@alias RewshInputModifier "shift"|"alt"|"ctrl"
----@alias RewshInputSpecialKey "up" | "down" | "right" | "left" | "enter" | "tab" | "backspace" | "escape" | "delete" | "insert" | "home" | "end" | "page_up" | "page_down" | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
+---@alias LyraInputKeyKind "none"|"letter"|"modifier"|"special"
+---@alias LyraInputModifier "shift"|"alt"|"ctrl"
+---@alias LyraInputSpecialKey "up" | "down" | "right" | "left" | "enter" | "tab" | "backspace" | "escape" | "delete" | "insert" | "home" | "end" | "page_up" | "page_down" | "f1" | "f2" | "f3" | "f4" | "f5" | "f6" | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
 
----@class RewshInputKey
----@field kind RewshInputKeyKind
+---@class LyraInputKey
+---@field kind LyraInputKeyKind
 ---@field letter string|nil
----@field modifier RewshInputModifier|nil
----@field special RewshInputSpecialKey|nil
+---@field modifier LyraInputModifier|nil
+---@field special LyraInputSpecialKey|nil
 ---@field modifiers integer
 ---@field shift boolean
 ---@field alt boolean
 ---@field ctrl boolean
 
----@alias RewshEventName "key_input"|"enter"|"exit"
----@alias RewshOnEvent  fun(event: "enter"|"exit", cb: fun()) | fun(event: "key_input", cb: fun(input: RewshInputKey))
+---@alias LyraEventName "key_input"|"enter"|"exit"
+---@alias LyraOnEvent  fun(event: "enter"|"exit", cb: fun()) | fun(event: "key_input", cb: fun(input: LyraInputKey))
 
----@class RewshCoreApi
----@field process RewshProcessApi
----@field path RewshPathApi
----@field on_event RewshOnEvent
----@field cd fun(path: string|RewshPath): boolean|nil, string|nil
+---@class LyraCoreApi
+---@field process LyraProcessApi
+---@field path LyraPathApi
+---@field on_event LyraOnEvent
+---@field cd fun(path: string|LyraPath): boolean|nil, string|nil
 ---@field set_raw_mode fun()
 ---@field unset_raw_mode fun()
 ---@field enter_alternate_screen fun()
 ---@field leave_alternate_screen fun()
 
----@class RewshCore
----@field api RewshCoreApi
----@field state RewshState
+---@class LyraCore
+---@field api LyraCoreApi
+---@field state LyraState
 
----@class Rewsh
----@field core RewshCore
----@field state RewshState
----@field plugin RewshPluginApi
+---@class Lyra
+---@field core LyraCore
+---@field state LyraState
+---@field plugin LyraPluginApi
 
----@type Rewsh
-rewsh = rewsh
+---@type Lyra
+lyra = lyra
