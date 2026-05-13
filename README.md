@@ -15,7 +15,7 @@ It is built around a small native core and a plugin-driven frontend: terminal I/
 
 ## Architecture
 
-- The shell loop and terminal input live in C.
+- The shell event loop and terminal input live in C.
 - Plugin manifests and URL resolution live in Rust.
 - `core` is a C plugin that installs the low-level runtime API into Lua.
 - `api` is a Lua plugin that builds the shell-facing API on top of `core`.
@@ -31,6 +31,13 @@ The bootstrap config in [config/init.lua](./config/init.lua) loads `core://api`,
 - [types/lyra.lua](./types/lyra.lua): Lua type stubs for the exposed API
 
 ## Building
+
+### Clone the repository
+
+```sh
+git clone --branch stable https://github.com/HasSak-47/lyra.git
+cd lyra
+```
 
 ### Dependencies
 
