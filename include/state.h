@@ -12,6 +12,7 @@
 #ifndef CONFIG_PATH
 #define CONFIG_PATH "./config/init.lua"
 #endif
+
 #include <lua.h>
 #include <stdbool.h>
 

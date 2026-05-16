@@ -1,9 +1,9 @@
-#include "ly_string.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "debug.h"
-#include "utils.h"
+
+#include <debug.h>
+#include <ly_string.h>
 
 struct String string_read_n(const char* chrs, const size_t len) {
     struct String cs = {};

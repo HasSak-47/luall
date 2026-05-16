@@ -47,11 +47,12 @@ $(OUT_RUST_LIB): Cargo.toml
 	cargo build
 	cp $(SRC_RUST_LIB) $(OUT_RUST_LIB)
 	cbindgen -c ./cbindgen_plugin.toml --crate lyra_plugins --output include/bindgen_plugin.h
-	cbindgen -c ./cbindgen_cli.toml --crate lyra_cli --output include/bindgen_cli.h
 	cbindgen -c ./cbindgen_log.toml --crate lyra_log --output include/bindgen_log.h
+	cbindgen -c ./cbindgen_cli.toml --crate lyra_cli --output include/bindgen_cli.h
+	sed -i 's/^Level args_get_level(/enum Level args_get_level(/' include/bindgen_cli.h
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJ_DIR):

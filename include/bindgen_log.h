@@ -1,5 +1,5 @@
-#ifndef __PLUGIN_BIND_GEN__
-#define __PLUGIN_BIND_GEN__
+#ifndef __LOG_BIND_GEN__
+#define __LOG_BIND_GEN__
 
 /* Generated with cbindgen:0.29.2 */
 
@@ -10,14 +10,14 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "lua.h"
 
 enum Level {
-  LEVEL_ERROR = 0,
-  LEVEL_WARN = 1,
-  LEVEL_INFO = 2,
-  LEVEL_DEBUG = 3,
-  LEVEL_TRACE = 4,
+  LEVEL_OFF = 0,
+  LEVEL_ERROR = 1,
+  LEVEL_WARN = 2,
+  LEVEL_INFO = 3,
+  LEVEL_DEBUG = 4,
+  LEVEL_TRACE = 5,
 };
 
 void init_logger(void);
@@ -27,8 +27,6 @@ void rust_log(unsigned int line,
               enum Level level,
               char *msg);
 
-#endif  /* __PLUGIN_BIND_GEN__ */
+void set_log(enum Level level);
 
-int32_t manager_unload_plugin(lua_State *lua,
-                              struct PluginManager *manager_ptr,
-                              const char *path);
+#endif  /* __LOG_BIND_GEN__ */

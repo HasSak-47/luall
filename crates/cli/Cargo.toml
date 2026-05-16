@@ -7,3 +7,4 @@ edition = "2024"
 clap = { version = "4.5.35", features = ["derive"] }
 dirs = {workspace = true}
 log = {workspace = true}
+lyra_log = {path = "../clog"}

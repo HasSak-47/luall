@@ -13,7 +13,6 @@
 #include <ly_string.h>
 #include <path.h>
 #include <state.h>
-#include <utils.h>
 
 void get_units(struct VectorPath* v, struct Path curr_dir) {
     debug_printf("reading units:...\n");

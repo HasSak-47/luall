@@ -9,7 +9,6 @@
 #include <path.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <utils.h>
 
 static struct PathSegment build_segment(const struct String name) {
     // not optimal but meaningful!

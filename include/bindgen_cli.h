@@ -1,5 +1,5 @@
-#ifndef __CLI_GEN__
-#define __CLI_GEN__
+#ifndef __CLI_BIND_GEN__
+#define __CLI_BIND_GEN__
 
 /* Generated with cbindgen:0.29.2 */
 
@@ -10,15 +10,16 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "./bindgen_log.h"
 
 struct Args;
 
-void free_args(struct Args *args);
+void args_delete(struct Args *args);
 
-const char *get_script(const struct Args *args);
+enum Level args_get_level(const struct Args *args);
 
-bool is_debug(const struct Args *args);
+const char *args_get_script(const struct Args *args);
 
-struct Args *parse_args(int argc, const char *const *argv);
+struct Args *args_parse(int argc, const char *const *argv);
 
-#endif  /* __CLI_GEN__ */
+#endif  /* __CLI_BIND_GEN__ */

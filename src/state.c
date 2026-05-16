@@ -2,7 +2,9 @@
 #include <lua.h>
 
 #include <debug.h>
+#include <ly_string.h>
 #include <path.h>
+#include <plugin/definitions.h>
 #include <state.h>
 
 #include <stdio.h>
@@ -13,8 +15,6 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "ly_string.h"
-#include "plugin/definitions.h"
 
 struct ShellState state = {};
 

@@ -1,3 +1,5 @@
+pub use lyra_log::ffi::Level;
+
 use super::*;
 
 use std::{
@@ -6,7 +8,7 @@ use std::{
 };
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn parse_args(argc: c_int, argv: *const *const c_char) -> *mut Args {
+pub unsafe extern "C" fn args_parse(argc: c_int, argv: *const *const c_char) -> *mut Args {
     let mut args = Vec::new();
     unsafe {
         for i in 0..(argc as usize) {
@@ -22,17 +24,17 @@ pub unsafe extern "C" fn parse_args(argc: c_int, argv: *const *const c_char) -> 
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn is_debug(args: *const Args) -> bool {
+pub unsafe extern "C" fn args_get_level(args: *const Args) -> Level {
     if args.is_null() {
-        return false;
+        return Level::Warn;
     }
     unsafe {
-        return (&*args).debug;
+        return (&*args).log_level.into();
     }
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn get_script(args: *const Args) -> *const c_char {
+pub unsafe extern "C" fn args_get_script(args: *const Args) -> *const c_char {
     if args.is_null() {
         return null();
     }
@@ -46,7 +48,7 @@ pub unsafe extern "C" fn get_script(args: *const Args) -> *const c_char {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn free_args(args: *mut Args) {
+pub unsafe extern "C" fn args_delete(args: *mut Args) {
     if !args.is_null() {
         unsafe {
             drop(Box::from_raw(args));

@@ -1,9 +1,9 @@
 #include <bindgen_cli.h>
+#include <bindgen_log.h>
 #include <debug.h>
 #include <input_key.h>
 #include <path.h>
 #include <state.h>
-#include <utils.h>
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -24,16 +24,18 @@ int main(const int argc, const char* argv[]) {
     const char* script = NULL;
 
     debug_printf("parsing args...\n");
-    args = parse_args(argc, argv);
+    args = args_parse(argc, argv);
 
-    if (is_debug(args)) {
+    if (args_get_level(args) >= LEVEL_DEBUG) {
         state.vars.debug = true;
         debug_printf("running in debug mode\n");
     }
-    script = get_script(args);
+    script = args_get_script(args);
     if (script != NULL) {
         debug_printf("running scripting %s\n", script);
     }
+
+    args_delete(args);
 
     debug_printf("starting shell state\n");
     init_shell_state();
