@@ -1,5 +1,5 @@
 use super::raw_bindings as rb;
-use crate::plugin::{PluginData, PluginKind};
+use crate::{PluginData, PluginKind};
 use anyhow::Result;
 
 /// cbindgen:ignore

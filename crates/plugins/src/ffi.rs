@@ -3,7 +3,7 @@ use std::{
     ptr,
 };
 
-use crate::plugin::{PluginData, PluginHandler, PluginKind, PluginManager, raw_bindings as rb};
+use crate::{PluginData, PluginHandler, PluginKind, PluginManager, raw_bindings as rb};
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
@@ -81,7 +81,6 @@ pub extern "C" fn manager_resolve_plugin(
 }
 
 #[allow(unused)]
-/// cbindgen:ignore
 #[unsafe(no_mangle)]
 pub extern "C" fn manager_unload_plugin(
     lua: *mut super::bindings::lua_State,
@@ -203,6 +202,7 @@ pub extern "C" fn get_plugin_dependecies_iterator(
 ) -> *const CIteratorString {
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
+    println!("path: {path}");
 
     let plugin = unsafe { (&*manager) }.plugins.get(&path).unwrap();
     let plugins = plugin

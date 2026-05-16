@@ -1,0 +1,17 @@
+[package]
+name = "lyra_plugins"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.97"
+serde = { version = "1.0", features = ["derive"] }
+toml = { version= "1.0.6", features = ["serde"] }
+url = { version = "2.5.8", features = ["serde"] }
+dirs = {workspace = true}
+log = {workspace = true}
+
+[build-dependencies]
+clang = {version="2.0.0", features=["runtime", "clang_10_0"]}
+bindgen = "0.71.0"
+pkg-config = "0.3.33"

@@ -1,7 +1,6 @@
 #include <lauxlib.h>
 #include <lua.h>
 
-#include <bindgen.h>
 #include <debug.h>
 #include <path.h>
 #include <state.h>
@@ -24,7 +23,7 @@ struct ShellState state = {};
  */
 void init_shell_variables() {
     state.is_running = true;
-    char* host_temp = malloc(256);
+    char* host_temp  = malloc(256);
     gethostname(host_temp, 256);
     state.vars.host = string_from_cstr(host_temp);
     free(host_temp);
@@ -156,8 +155,8 @@ static int push_plugin_config(lua_State* L, const char* path, int opts_idx) {
     }
 
     if (!lua_istable(L, -1)) {
-        return luaL_error(L, "plugin config for '%s' must be a table or nil",
-            path);
+        return luaL_error(
+            L, "plugin config for '%s' must be a table or nil", path);
     }
 
     return 1;
@@ -410,13 +409,16 @@ static int lua_plugin_api_require(lua_State* L) {
     const char* path = lua_tostring(L, 1);
     if (!manager_is_plugin_loaded(state.manager, path)) {
         debug_printf("loading plugin %s\n", path);
-        manager_load_plugin(state.manager, path);
+        if (manager_load_plugin(state.manager, path) == -1) {
+            debug_printf("failed to load plugin %s...\n", path);
+            return 0;
+        }
     }
 
+    debug_printf("dependecies:...\n");
     const CIteratorString* iter =
         get_plugin_dependecies_iterator(state.manager, path);
 
-    debug_printf("dependecies:...\n");
     const char* next = NULL;
     while ((next = next_plugin_name(iter)) != NULL) {
         lua_pushcfunction(L, lua_plugin_api_require);
@@ -429,6 +431,7 @@ static int lua_plugin_api_require(lua_State* L) {
 
     switch (plugin_get_kind(d)) {
     case PLUGIN_KIND_C:
+    case PLUGIN_KIND_RUST:
     case PLUGIN_KIND_BINARY:
         push_plugin_config(L, path, 2);
         h->setup(L);

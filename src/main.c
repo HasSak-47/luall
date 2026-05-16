@@ -1,4 +1,4 @@
-#include <bindgen.h>
+#include <bindgen_cli.h>
 #include <debug.h>
 #include <input_key.h>
 #include <path.h>

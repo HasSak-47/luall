@@ -1,7 +1,7 @@
 #ifndef __PLUGIN_H__
 #define __PLUGIN_H__
 
-#include "bindgen.h"
+#include "bindgen_plugin.h"
 #include "plugin/definitions.h"
 
 typedef typeof(plugin_setup)* SetupFunction;

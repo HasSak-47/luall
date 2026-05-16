@@ -19,7 +19,7 @@ OBJ_DIR := .ignore/build
 SRCS := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/state/*.c)
 
 OUT_RUST_LIB := $(OBJ_DIR)/liblyra.so 
-SRC_RUST_LIB := target/release/liblyra.so
+SRC_RUST_LIB := target/debug/liblyra.so
 
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS)) $(OUT_RUST_LIB)
 
@@ -44,9 +44,11 @@ $(OUT): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS)
 
 $(OUT_RUST_LIB): Cargo.toml
-	cargo build --release
+	cargo build
 	cp $(SRC_RUST_LIB) $(OUT_RUST_LIB)
-	cbindgen -c ./cbindgen.toml --output include/bindgen.h
+	cbindgen -c ./cbindgen_plugin.toml --crate lyra_plugins --output include/bindgen_plugin.h
+	cbindgen -c ./cbindgen_cli.toml --crate lyra_cli --output include/bindgen_cli.h
+	cbindgen -c ./cbindgen_log.toml --crate lyra_log --output include/bindgen_log.h
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	mkdir -p $(dir $@)

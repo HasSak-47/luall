@@ -16,7 +16,7 @@ use std::{
 use anyhow::{Result, bail};
 use serde::{Deserialize, Serialize};
 
-use crate::plugin::{bindings::PluginHandlerWrapper, version::Version};
+use crate::{bindings::PluginHandlerWrapper, version::Version};
 
 pub struct PluginHandler {
     _opaque: [u8; 0],
@@ -315,7 +315,7 @@ impl PluginManager {
 
 #[cfg(test)]
 mod test {
-    use crate::plugin::PluginData;
+    use crate::PluginData;
     use anyhow::*;
     use std::path::{PathBuf, absolute};
     use url::Url;

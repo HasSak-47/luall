@@ -1,8 +1,6 @@
 #ifndef __STATE_H__
 #define __STATE_H__
 
-#include "utils.h"
-
 #ifndef PLUGIN_PATH
 #define PLUGIN_PATH "./plugins"
 #endif
@@ -17,10 +15,10 @@
 #include <lua.h>
 #include <stdbool.h>
 
-#include "bindgen.h"
-#include "input_key.h"
-#include "path.h"
-#include "plugin.h"
+#include "./bindgen_plugin.h"
+#include "./input_key.h"
+#include "./path.h"
+#include "./plugin.h"
 
 // Luall.vars
 struct User {

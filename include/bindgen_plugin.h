@@ -1,5 +1,5 @@
-#ifndef __BIND_GEN__
-#define __BIND_GEN__
+#ifndef __PLUGIN_BIND_GEN__
+#define __PLUGIN_BIND_GEN__
 
 /* Generated with cbindgen:0.29.2 */
 
@@ -19,8 +19,6 @@ enum PluginKind {
   PLUGIN_KIND_RUST = 3,
 };
 
-struct Args;
-
 struct CIterator______c_char;
 
 struct PluginData;
@@ -33,8 +31,6 @@ typedef struct CIterator______c_char CIteratorString;
 
 void delete_plugin_manager(struct PluginManager *ptr);
 
-void free_args(struct Args *args);
-
 struct PluginData *get_plugin(struct PluginManager *manager_ptr,
                               const char *path);
 
@@ -44,10 +40,6 @@ const CIteratorString *get_plugin_dependecies_iterator(struct PluginManager *man
 struct PluginHandler *get_plugin_handler(struct PluginData *plugin);
 
 const CIteratorString *get_plugin_iterator(struct PluginManager *manager);
-
-const char *get_script(const struct Args *args);
-
-bool is_debug(const struct Args *args);
 
 char manager_is_plugin_loaded(struct PluginManager *manager_ptr,
                               const char *path);
@@ -61,11 +53,13 @@ int32_t manager_load_plugin(struct PluginManager *manager_ptr,
 struct PluginData *manager_resolve_plugin(struct PluginManager *manager_ptr,
                                           const char *path);
 
+int32_t manager_unload_plugin(lua_State *lua,
+                              struct PluginManager *manager_ptr,
+                              const char *path);
+
 struct PluginManager *new_plugin_manager(void);
 
 const char *next_plugin_name(const CIteratorString *iter);
-
-struct Args *parse_args(int argc, const char *const *argv);
 
 char *plugin_get_compilation_path(const struct PluginData *plugin);
 
@@ -79,8 +73,4 @@ char *plugin_get_shared_object_path(const struct PluginData *plugin);
 
 char *plugin_get_url(struct PluginData *plugin);
 
-#endif  /* __BIND_GEN__ */
-
-int32_t manager_unload_plugin(lua_State *lua,
-                              struct PluginManager *manager_ptr,
-                              const char *path);
+#endif  /* __PLUGIN_BIND_GEN__ */

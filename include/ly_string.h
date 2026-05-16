@@ -2,7 +2,7 @@
 #define __STRING_H__
 
 #include <stdbool.h>
-#include "./utils.h"
+#include "./vectors.h"
 
 // non null terminated string
 DefineVector(String, char);

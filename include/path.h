@@ -15,7 +15,7 @@ struct PathSegment {
     enum SegmentType ty;
 };
 
-#include "utils.h"
+#include "vectors.h"
 
 DefineVector(InnerVectorPath, struct PathSegment);
 

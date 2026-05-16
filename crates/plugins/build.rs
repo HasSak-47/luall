@@ -5,14 +5,14 @@ fn main() {
         .atleast_version("5.4")
         .probe("lua")
         .unwrap();
-    println!("cargo:rerun-if-changed=include/plugin.h");
-    println!("cargo:rerun-if-changed=include/bindgen.h");
-    println!("cargo:rerun-if-changed=include/plugin_bindings.h");
+    println!("cargo:rerun-if-changed=../../include/plugin.h");
+    println!("cargo:rerun-if-changed=../../include/bindgen.h");
+    println!("cargo:rerun-if-changed=../../include/plugin_bindings.h");
 
     let mut bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
-        .header("include/plugin_bindings.h")
+        .header("../../include/plugin_bindings.h")
         // .opaque_type("lua_State")
         .impl_debug(true)
         .impl_partialeq(true)

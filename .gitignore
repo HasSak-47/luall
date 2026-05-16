@@ -1,7 +1,7 @@
 # user specific clang lsp config
 compile_flags.txt
 vgcore.*
-lyra
+/lyra
 .env
 
 # python
