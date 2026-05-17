@@ -1,11 +1,13 @@
+#include <lauxlib.h>
+#include <lua.h>
+
+#include <debug.h>
+#include <ly_string.h>
 #include <path.h>
 #include <path_api.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "debug.h"
-#include "lauxlib.h"
-#include "lua.h"
-#include "ly_string.h"
 
 static struct Path* check_path(lua_State* L, int idx) {
     return (struct Path*)luaL_checkudata(L, idx, LUA_PATH_MT);

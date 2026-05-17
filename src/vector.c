@@ -27,7 +27,7 @@ void __vector_pop(struct __Vector* v, const size_t size) {
 void __vector_reserve(struct __Vector* v, const size_t cap, const size_t size) {
     void* aux = realloc(v->data, size * cap);
     if (aux == NULL)
-        temporal_suicide_crash("could not resize vector", 0);
+        temporal_suicide_msg("could not resize vector");
     v->data = aux;
     v->cap  = cap;
 }

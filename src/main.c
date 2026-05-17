@@ -2,6 +2,7 @@
 #include <bindgen_log.h>
 #include <debug.h>
 #include <input_key.h>
+#include <logs.h>
 #include <path.h>
 #include <state.h>
 

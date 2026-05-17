@@ -3,10 +3,6 @@
 
 #include <utils.h>
 
-void debug_printf(const char* fmt, ...);
-void set_debug();
-void unset_debug();
-
 void test_handler(const int argc, const char** argv);
 
 typedef int TestReturnT;

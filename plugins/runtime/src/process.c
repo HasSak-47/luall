@@ -1,24 +1,22 @@
 #include <debug.h>
+#include <logs.h>
 #include <process.h>
 #include <state.h>
-#include <utils.h>
+#include <term.h>
 
 #include <errno.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
-
-#include <stddef.h>
-#include <sys/wait.h>
 
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include <lauxlib.h>
 #include <lua.h>
-
-#include <term.h>
 
 /**
  * cmd | cmd

@@ -1,4 +1,4 @@
-lyra.plugin.require("core://parser")
+lyra.plugin.require("core://runtime")
 lyra.plugin.require("core://api")
 
 local input_state = {

@@ -3,26 +3,30 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include "bindgen_log.h"
 
-void __error_msg(int line, char* file, char* fmt, char* msg, int code) {
-    printf(fmt, file, line, msg);
-    exit(code);
+static void __log_msg_varags(
+    enum Level level, int line, char* file, const char* fmt, va_list arg) {
+    char* buf = NULL;
+    vasprintf(&buf, fmt, arg);
+
+    rust_log(line, file, level, buf);
+
+    free(buf);
 }
 
-static void __debug_printf_set_debug(const char* fmt, va_list args) {
-    vprintf(fmt, args);
-}
-
-static void __debug_printf_unset_debug(const char* fmt, va_list args) {}
-
-typedef void (*__debug_printf)(const char*, va_list args);
-
-static __debug_printf __functions[] = {
-    __debug_printf_unset_debug, __debug_printf_set_debug};
-
-void debug_printf(const char* fmt, ...) {
+void __log_msg(enum Level level, int line, char* file, const char* fmt, ...) {
     va_list(args);
     va_start(args, fmt);
-    __functions[state.vars.debug](fmt, args);
+    __log_msg_varags(LEVEL_ERROR, line, file, fmt, args);
     va_end(args);
+}
+
+void __suicide_msg(int line, char* file, char* fmt, ...) {
+    va_list(args);
+    va_start(args, fmt);
+    __log_msg_varags(LEVEL_ERROR, line, file, fmt, args);
+    va_end(args);
+    exit(-1);
 }

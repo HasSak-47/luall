@@ -1,10 +1,11 @@
+#include <lauxlib.h>
+#include <lua.h>
+
 #include <event_api.h>
+#include <logs.h>
+#include <state.h>
+
 #include <string.h>
-#include "bindgen.h"
-#include "debug.h"
-#include "lauxlib.h"
-#include "lua.h"
-#include "state.h"
 
 int add_lua_event(lua_State* L) {
     const char* event_string = lua_tostring(L, 1);

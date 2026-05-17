@@ -3,15 +3,16 @@
 
 #include <plugin/definitions.h>
 
+#include <event_api.h>
+#include <logs.h>
 #include <path_api.h>
 #include <process.h>
 #include <state_api.h>
+
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <unistd.h>
-#include "debug.h"
-#include "event_api.h"
-#include "lua.h"
 
 int plugin_setup(lua_State* L) {
     luaL_requiref(L, "base", luaopen_base, true);

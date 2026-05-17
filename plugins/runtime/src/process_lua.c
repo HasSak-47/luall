@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ly_string.h"
-#include "process.h"
+#include <ly_string.h>
+#include <process.h>
 
 #define LUA_COMMAND_MT "lyra.core.api.process.command"
 #define LUA_PIPE_MT "lyra.core.api.process.pipe"

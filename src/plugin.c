@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <debug.h>
+#include <logs.h>
 #include <ly_string.h>
 #include <path.h>
 #include <state.h>

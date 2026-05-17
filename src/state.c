@@ -1,7 +1,7 @@
 #include <lauxlib.h>
 #include <lua.h>
 
-#include <debug.h>
+#include <logs.h>
 #include <ly_string.h>
 #include <path.h>
 #include <plugin/definitions.h>

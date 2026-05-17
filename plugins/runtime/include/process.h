@@ -4,7 +4,7 @@
 #include <lua.h>
 #include <stdbool.h>
 #include <unistd.h>
-#include "utils.h"
+#include <vectors.h>
 
 struct Pipe {
     int p[2];
@@ -38,7 +38,8 @@ void pipe_close(struct Pipe* p);
 struct Command command_new(const char* path);
 
 void command_reserve_size(struct Command* cmd, size_t size);
-void command_bind_pipe(struct Command* cmd, struct Pipe* pipe, enum BindType ty);
+void command_bind_pipe(
+    struct Command* cmd, struct Pipe* pipe, enum BindType ty);
 void command_add_arg(struct Command* cmd, const char* arg);
 
 pid_t command_run(struct Command* p);

@@ -1,4 +1,4 @@
-#include <debug.h>
+#include <logs.h>
 #include <term.h>
 
 #include <termios.h>
