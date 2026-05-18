@@ -55,7 +55,7 @@ int empty_plugin_setup(lua_State* L) {
 }
 
 static void run_event_enter_hook(struct Hook* hook) {
-    debug_printf("running enter event");
+    log_debug("running enter event");
     if (hook->kind == PLUGIN_KIND_C) {
         hook->actor(state.L);
     }
@@ -66,7 +66,7 @@ static void run_event_enter_hook(struct Hook* hook) {
 }
 
 static void run_event_exit_hook(struct Hook* hook) {
-    debug_printf("running exit event");
+    log_debug("running exit event");
     if (hook->kind == PLUGIN_KIND_C) {
         hook->actor(state.L);
     }
@@ -77,7 +77,7 @@ static void run_event_exit_hook(struct Hook* hook) {
 }
 
 static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
-    debug_printf("running input event");
+    log_debug("running input event");
     if (hook->kind == PLUGIN_KIND_C) {
         push_input_key(state.L, key);
         hook->actor(state.L);
@@ -90,7 +90,7 @@ static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
 }
 
 void trigger_enter_hook() {
-    debug_printf("running enter hooks");
+    log_debug("running enter hooks");
     for (size_t i = 0; i < state.hooks.len; ++i) {
         if (state.hooks.data[i].event == EVENT_ENTER) {
             run_event_enter_hook(&state.hooks.data[i]);
@@ -99,7 +99,7 @@ void trigger_enter_hook() {
 }
 
 void trigger_exit_hook() {
-    debug_printf("running exit hook...");
+    log_debug("running exit hook...");
     for (size_t i = 0; i < state.hooks.len; ++i) {
         if (state.hooks.data[i].event == EVENT_EXIT) {
             run_event_exit_hook(&state.hooks.data[i]);
@@ -408,14 +408,14 @@ static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
 static int lua_plugin_api_require(lua_State* L) {
     const char* path = lua_tostring(L, 1);
     if (!manager_is_plugin_loaded(state.manager, path)) {
-        debug_printf("loading plugin %s", path);
+        log_debug("loading plugin %s", path);
         if (manager_load_plugin(state.manager, path) == -1) {
-            debug_printf("failed to load plugin %s...", path);
+            log_debug("failed to load plugin %s...", path);
             return 0;
         }
     }
 
-    debug_printf("dependecies:...");
+    log_debug("dependecies:...");
     const CIteratorString* iter =
         get_plugin_dependecies_iterator(state.manager, path);
 
@@ -553,7 +553,7 @@ void init_shell_state() {
     init_shell_config();
 
     char* path = path_get_string(state.config.config);
-    debug_printf("running init: %s", path);
+    log_debug("running init: %s", path);
     if (luaL_dofile(state.L, path) != LUA_OK) {
         const char* err = lua_tostring(state.L, -1); // error message on stack
         printf("Lua error: %s\n", err);
@@ -601,4 +601,21 @@ void add_hook(enum Event event, Actor actor) {
     };
 
     vector_push(state.hooks, hook);
+}
+
+void set_to_foreground() {
+    log_debug("setting to foreground\n");
+    const int FD = STDIN_FILENO;
+    if (tcgetpgrp(FD) < 0)
+        temporal_suicide_msg("could not get fd");
+    if (setpgid(0, 0) == -1)
+        temporal_suicide_msg("could not set program id");
+    pid_t group_id = getpgrp();
+    // NOTE: I don't know why this is needed
+    // it just works like that
+    // sure why not ignore this random signal
+    signal(SIGTTOU, SIG_IGN);
+    int ok = tcsetpgrp(FD, group_id);
+    if (ok == -1)
+        temporal_suicide_msg("could not set group id");
 }

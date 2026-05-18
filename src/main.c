@@ -30,33 +30,33 @@ int main(const int argc, const char* argv[]) {
     set_log_level(state.vars.log_level);
 
     if (state.vars.log_level >= LEVEL_DEBUG) {
-        debug_printf("running in debug mode");
+        log_debug("running in debug mode");
     }
 
     script = args_get_script(args);
     if (script != NULL) {
-        debug_printf("running scripting %s", script);
+        log_debug("running scripting %s", script);
     }
 
     args_delete(args);
 
-    debug_printf("starting shell state");
+    log_debug("starting shell state");
     init_shell_state();
 
-    debug_printf("started event loop");
+    log_debug("started event loop");
     trigger_enter_hook();
     struct InputKey key = input_key_none();
 
     while (state.is_running) {
         if (state.reload) {
-            debug_printf("reloading...");
-            debug_printf("running exit hooks before reload...");
+            log_debug("reloading...");
+            log_debug("running exit hooks before reload...");
             trigger_exit_hook();
-            debug_printf("ending current state...");
+            log_debug("ending current state...");
             end_shell_state();
-            debug_printf("initing current state...");
+            log_debug("initing current state...");
             init_shell_state();
-            debug_printf("running enter hooks after reload...");
+            log_debug("running enter hooks after reload...");
             trigger_enter_hook();
             state.reload = false;
         }

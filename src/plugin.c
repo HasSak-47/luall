@@ -15,9 +15,9 @@
 #include <state.h>
 
 void get_units(struct VectorPath* v, struct Path curr_dir) {
-    debug_printf("reading units:...\n");
+    log_debug("reading units:...");
     if (!path_is_dir(&curr_dir)) {
-        debug_printf("found leaf\n");
+        log_debug("found leaf");
         return;
     }
 
@@ -53,15 +53,15 @@ static void complile_c_plugin_no_makefile(
     struct VectorPath compilation_units = {0, 0, 0};
     get_units(&compilation_units, path);
 
-    debug_printf("compilation_units (%lu) @ %p\n", compilation_units.len,
+    log_debug("compilation_units (%lu) @ %p", compilation_units.len,
         compilation_units.data);
 
     struct VectorString args = {};
-    debug_printf("creating argv...\n");
-    debug_printf("pushing compiler name\n");
+    log_debug("creating argv...");
+    log_debug("pushing compiler name");
     vector_push(args, string_from_cstr("/bin/gcc"));
 
-    debug_printf("pushing compiling flags\n");
+    log_debug("pushing compiling flags");
     for (size_t i = 0; i < sizeof flags / sizeof flags[0]; ++i) {
         vector_push(args, string_from_cstr(flags[i]));
     }
@@ -69,26 +69,26 @@ static void complile_c_plugin_no_makefile(
     vector_push(args, string_from_cstr("-I"));
     vector_push(args, string_from_cstr(include_path_str));
 
-    debug_printf("pushing units\n");
+    log_debug("pushing units");
     for (size_t i = 0; i < compilation_units.len; ++i) {
         char* path_str = path_get_string(compilation_units.data[i]);
-        debug_printf("\tpushing unit: %s @ %p\n", path_str, path_str);
+        log_debug("\tpushing unit: %s @ %p", path_str, path_str);
         vector_push(args, string_from_cstr(path_str));
 
         free(path_str);
     }
 
-    debug_printf("generating compiler output path\n");
+    log_debug("generating compiler output path");
     vector_push(args, string_from_cstr("-o"));
     vector_push(args, string_from_cstr(cache_str));
 
-    debug_printf("generating argv\n");
+    log_debug("generating argv");
     char** argv = malloc(sizeof(char*) * (args.len + 1));
 
-    debug_printf("copying from String to cstr\n");
+    log_debug("copying from String to cstr");
     for (size_t i = 0; i < args.len; ++i) {
         argv[i] = string_to_cstring(args.data[i]);
-        debug_printf("added: %s\n", argv[i]);
+        log_debug("added: %s", argv[i]);
     }
     argv[args.len] = NULL;
     pid_t pid      = fork();
@@ -98,11 +98,11 @@ static void complile_c_plugin_no_makefile(
         exit(-1);
     }
     else if (pid > 0) {
-        debug_printf("pid %lu\n", pid);
+        log_debug("pid %lu", pid);
         int status = 0;
         waitpid(pid, &status, 0);
         bool compiled = WIFEXITED(status) && WEXITSTATUS(status) == 0;
-        debug_printf("compilation_status %s\n", compiled ? "ok" : "err");
+        log_debug("compilation_status %s", compiled ? "ok" : "err");
         if (!compiled) {
             printf("plugin compilation failed, refusing to run\n");
         }
@@ -120,15 +120,15 @@ static void complile_c_plugin_makefile(struct Path path, const char* object_str,
     const char* artifact_str, const char* name_str) {
 
     struct VectorString args = {};
-    debug_printf("creating argv...\n");
-    debug_printf("pushing make\n");
+    log_debug("creating argv...");
+    log_debug("pushing make");
     vector_push(args, string_from_cstr("/bin/make"));
     vector_push(args, string_from_cstr("-C"));
     vector_push(args, string_from_cstr(path_get_string(path)));
 
     vector_push(args, string_from_cstr("CFLAGS+= '-I../../include'"));
 
-    debug_printf("pushing artifact flags\n");
+    log_debug("pushing artifact flags");
 
     struct String out_flag = string_from_cstr("OUT");
     string_concat_cstr(&out_flag, "=");
@@ -142,13 +142,13 @@ static void complile_c_plugin_makefile(struct Path path, const char* object_str,
 
     vector_push(args, compilie_flag);
 
-    debug_printf("generating argv\n");
+    log_debug("generating argv");
     char** argv = malloc(sizeof(char*) * (args.len + 1));
 
-    debug_printf("copying from String to cstr\n");
+    log_debug("copying from String to cstr");
     for (size_t i = 0; i < args.len; ++i) {
         argv[i] = string_to_cstring(args.data[i]);
-        debug_printf("added: %s\n", argv[i]);
+        log_debug("added: %s", argv[i]);
     }
     argv[args.len] = NULL;
     pid_t pid      = fork();
@@ -158,11 +158,11 @@ static void complile_c_plugin_makefile(struct Path path, const char* object_str,
         exit(-1);
     }
     else if (pid > 0) {
-        debug_printf("pid %lu\n", pid);
+        log_debug("pid %lu", pid);
         int status = 0;
         waitpid(pid, &status, 0);
         bool compiled = WIFEXITED(status) && WEXITSTATUS(status) == 0;
-        debug_printf("compilation_status %s\n", compiled ? "ok" : "err");
+        log_debug("compilation_status %s", compiled ? "ok" : "err");
         if (!compiled) {
             printf("plugin compilation failed, refusing to run\n");
         }
@@ -181,7 +181,7 @@ static void complile_c_plugin(const struct PluginData* data) {
     char* artifact_str = plugin_get_compilation_path(data);
     char* name_str     = plugin_get_name(data);
 
-    debug_printf("loading c plugin %s @ %s\n", name_str, path_str);
+    log_debug("loading c plugin %s @ %s", name_str, path_str);
     struct Path artifact_path = path_parse(artifact_str);
     path_mkdir_p(&artifact_path);
 
@@ -190,10 +190,10 @@ static void complile_c_plugin(const struct PluginData* data) {
 
     bool has_make = false;
 
-    debug_printf("searching for makefile in %lu paths\n", childs.len);
+    log_debug("searching for makefile in %lu paths", childs.len);
     for (size_t i = 0; i < childs.len; ++i) {
         struct String name = path_get_name(&childs.data[i]);
-        debug_printf("\tfile: '%.*s': %lu\n", name.len, name.data, name.len);
+        log_debug("\tfile: '%.*s': %lu", name.len, name.data, name.len);
         for (size_t j = 0; j < name.len; ++j) {
             name.data[j] = tolower(name.data[j]);
         }

@@ -100,7 +100,7 @@ int index_state_vars(lua_State* L) {
         lua_pushinteger(L, state.vars.error);
     }
     else if (strcmp(name, "debug") == 0) {
-        lua_pushboolean(L, state.vars.debug);
+        lua_pushboolean(L, state.vars.log_level == LEVEL_DEBUG);
     }
     else {
         return 0;
@@ -144,7 +144,7 @@ int newindex_state_vars(lua_State* L) {
         state.vars.error = luaL_checkinteger(L, 3);
     }
     else if (strcmp(name, "debug") == 0) {
-        state.vars.debug = lua_toboolean(L, 3);
+        state.vars.log_level = lua_toboolean(L, 3) ? LEVEL_DEBUG : LEVEL_OFF;
     }
     return 0;
 }

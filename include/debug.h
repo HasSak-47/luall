@@ -1,8 +1,6 @@
 #ifndef __debug_h__
 #define __debug_h__
 
-#include <utils.h>
-
 void test_handler(const int argc, const char** argv);
 
 typedef int TestReturnT;

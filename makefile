@@ -30,7 +30,7 @@ CFLAGS := -g -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
 
 LDFLAGS := -o $(OUT) -export-dynamic $(LUA_LIBS)
 
-build: $(OUT)
+build: $(OBJ_DIR) $(OUT)
 
 compileflags:
 	@echo -I  > compile_flags.txt

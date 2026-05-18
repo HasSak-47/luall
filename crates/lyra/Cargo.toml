@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 lyra_plugins = { path ="../plugins"}
-lyra_log = { path ="../clog"}
+lyra_log = { path ="../log"}
 lyra_cli = { path ="../cli"}
 
 [lib]

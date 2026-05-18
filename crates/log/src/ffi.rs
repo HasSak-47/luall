@@ -1,4 +1,7 @@
-use std::ffi::{CStr, c_char, c_uint};
+use std::{
+    ffi::{CStr, c_char, c_uint},
+    fmt::Display,
+};
 
 use log::{
     Level as LogLevel, LevelFilter as LogLevelFilter, MetadataBuilder, RecordBuilder, logger,
@@ -6,8 +9,6 @@ use log::{
 
 pub use pretty_env_logger;
 
-/// cbindgen:prefix-with-name
-/// cbindgen:rename-all=SCREAMING_SNAKE_CASE
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
 pub enum Level {
@@ -18,6 +19,13 @@ pub enum Level {
     Debug = 4,
     Trace = 5,
 }
+
+impl Display for Level {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", log::LevelFilter::from(*self))
+    }
+}
+
 macro_rules! generate_arms {
     ($a: ident, $b: ident $(,$x:ident => $y:ident)* ; $(,$w: ident)*) => {
 impl From<$a> for $b{
@@ -39,7 +47,11 @@ generate_arms!(LogLevel, Level;, Error, Warn, Info, Debug, Trace);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn init_logger() {
-    pretty_env_logger::init_custom_env("LYRA_LOG");
+    pretty_env_logger::formatted_builder()
+        .filter_level(LogLevelFilter::Trace)
+        .format_module_path(true)
+        .parse_env("LYRA_LOG")
+        .init();
 }
 
 #[unsafe(no_mangle)]
@@ -62,13 +74,12 @@ pub unsafe extern "C" fn rust_log(level: Level, line: c_uint, file: *mut c_char,
     } else {
         unsafe { CStr::from_ptr(file) }.to_str().ok()
     };
-
     let args = format_args!("{}", msg);
-    // let meta = MetadataBuilder::new().level(level.into()).build();
     let r = RecordBuilder::new()
         .level(level.into())
         .line(if line != 0 { Some(line) } else { None })
         .file(file)
+        .module_path(file)
         .args(args)
         .build();
 

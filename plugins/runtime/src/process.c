@@ -51,7 +51,7 @@ struct Command command_new(const char* cmd) {
 
         .pipe = {NULL, NoneBind},
     };
-    debug_printf("creating cmd for path: %p %s\n", cmd, cmd);
+    log_debug("creating cmd for path: %p %s", cmd, cmd);
     // first arg is the name
     command_add_arg(&c, cmd);
 
@@ -61,7 +61,7 @@ struct Command command_new(const char* cmd) {
 void command_bind_pipe(
     struct Command* cmd, struct Pipe* pipe, enum BindType type) {
     struct PipeBind binding = {pipe, type};
-    debug_printf("binding %p(%d %d) pipe for cmd %p with bind %d\n", pipe,
+    log_debug("binding %p(%d %d) pipe for cmd %p with bind %d", pipe,
         pipe->p[0], pipe->p[1], cmd, (int)type);
 
     cmd->pipe = binding;
@@ -75,7 +75,7 @@ void command_reserve_size(struct Command* cmd, size_t argc) {
  * takes an string and and clones it
  */
 void command_add_arg(struct Command* cmd, const char* arg) {
-    debug_printf("add_arg: %p %s\n", arg, arg);
+    log_debug("add_arg: %p %s", arg, arg);
     char* clone_arg = arg != NULL ? strdup(arg) : NULL;
     vector_push(cmd->args, clone_arg);
 }
@@ -89,24 +89,24 @@ void command_add_arg(struct Command* cmd, const char* arg) {
 pid_t command_run(struct Command* p) {
     // all commands must end with a trailing NULL
     command_add_arg(p, NULL);
-    if (state.vars.debug) {
-        debug_printf("[parent]: running command: %s", p->cmd);
+    if (state.vars.log_level >= LEVEL_DEBUG) {
+        log_debug("[parent]: running command: %s", p->cmd);
         for (size_t i = 0; i < p->args.len; ++i) {
-            debug_printf(" %s", p->args.data[i]);
+            log_debug(" %s", p->args.data[i]);
         }
-        debug_printf("\n");
+        log_debug("");
     }
 
     pid_t pid = fork();
     if (pid == 0) { // child
-        debug_printf("[child]: name: %s\n", p->cmd);
+        log_debug("[child]: name: %s", p->cmd);
         if (p->foreground) {
-            debug_printf("[child]: setting to foreground\n");
+            log_debug("[child]: setting to foreground");
             unset_raw_mode();
             set_to_foreground();
-            debug_printf("[child]: child is foreground\n");
+            log_debug("[child]: child is foreground");
         }
-        debug_printf("[child]: setting pipes\n");
+        log_debug("[child]: setting pipes");
         if (p->pipe.pipe != NULL) {
             if (p->pipe.ty & ReadBind) {
                 int error = dup2(p->pipe.pipe->p[0], STDIN_FILENO);
@@ -140,7 +140,7 @@ pid_t command_run(struct Command* p) {
             }
         }
 
-        debug_printf("[child]: executing cmd %s...\n", p->cmd);
+        log_debug("[child]: executing cmd %s...", p->cmd);
         int r = execv(p->cmd, p->args.data);
         if (r < 0)
             temporal_suicide_msg("[child] didn't exec :)");
@@ -150,15 +150,15 @@ pid_t command_run(struct Command* p) {
     }
 
     // parent
-    debug_printf("[parent]: cleaning command data\n");
+    log_debug("[parent]: cleaning command data");
     for (char** arg = p->args.data; *arg != NULL; ++arg) {
-        debug_printf("[parent]: removing arg: %p %s\n", *arg, *arg);
+        log_debug("[parent]: removing arg: %p %s", *arg, *arg);
         free(*arg);
     }
 
     free(p->args.data);
     free(p->cmd);
-    debug_printf("[parent]: returning pid\n");
+    log_debug("[parent]: returning pid");
     p->cmd         = NULL;
     p->args.data   = NULL;
     p->running_pid = pid;

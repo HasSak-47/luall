@@ -39,7 +39,7 @@ derive_constructor = false
 
 [enum]
 rename_variants = "ScreamingSnakeCase"
-prefix_with_name = false
+prefix_with_name = true
 
 [const]
 

@@ -14,11 +14,11 @@ void unset_raw_mode() {
     if (got_original)
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
     else
-        debug_printf("there is no original termios?\n");
+        log_debug("there is no original termios?");
 }
 
 void set_raw_mode() {
-    debug_printf("entering raw mode...");
+    log_debug("entering raw mode...");
     if (!got_original) {
         tcgetattr(STDIN_FILENO, &orig_termios);
         atexit(unset_raw_mode);
@@ -35,10 +35,10 @@ void set_raw_mode() {
 
 void enter_alternate_screen() {
     write(STDOUT_FILENO, "\x1b[?1049h", 8);
-    debug_printf("entered alternate screen\n");
+    log_debug("entered alternate screen");
 }
 
 void leave_alternate_screen() {
     write(STDOUT_FILENO, "\x1b[?1049l", 8);
-    debug_printf("left alternate screen\n");
+    log_debug("left alternate screen");
 }

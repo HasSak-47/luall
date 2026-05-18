@@ -191,6 +191,7 @@ impl PluginData {
         // TODO: add toggle to set to a normal filesytem path
         let mut plugin_path = std::path::absolute(PathBuf::from("./plugins"))?;
         plugin_path.push(source.host_str().unwrap());
+        log::debug!("loading core plugin: {source} @ {}", plugin_path.display());
 
         return Self::_resolve_from_disk(plugin_path, source, SourceKind::CORE);
     }
@@ -240,6 +241,7 @@ impl PluginManager {
         if self.plugins.contains_key(path) {
             return Ok(self.plugins.get_mut(path).unwrap());
         }
+        log::debug!("resolving plugin {path}");
         let manifest = PluginData::resolve(path)?;
 
         for dependecy in &manifest.manifest.dependecies {
