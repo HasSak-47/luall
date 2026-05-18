@@ -20,13 +20,15 @@ enum Level {
   LEVEL_TRACE = 5,
 };
 
+enum Level get_log_level(void);
+
 void init_logger(void);
 
-void rust_log(unsigned int line,
+void rust_log(enum Level level,
+              unsigned int line,
               char *file,
-              enum Level level,
               char *msg);
 
-void set_log(enum Level level);
+void set_log_level(enum Level level);
 
 #endif  /* __LOG_BIND_GEN__ */

@@ -1,5 +1,4 @@
 #include <bindgen_cli.h>
-#include <bindgen_log.h>
 #include <debug.h>
 #include <input_key.h>
 #include <logs.h>
@@ -15,6 +14,7 @@
 #include <unistd.h>
 
 int main(const int argc, const char* argv[]) {
+    init_logger();
 
 #ifdef LY_TEST
     test_handler(argc, argv);
@@ -24,24 +24,26 @@ int main(const int argc, const char* argv[]) {
     struct Args* args  = NULL;
     const char* script = NULL;
 
-    debug_printf("parsing args...\n");
     args = args_parse(argc, argv);
 
-    if (args_get_level(args) >= LEVEL_DEBUG) {
-        state.vars.debug = true;
-        debug_printf("running in debug mode\n");
+    state.vars.log_level = args_get_level(args);
+    set_log_level(state.vars.log_level);
+
+    if (state.vars.log_level >= LEVEL_DEBUG) {
+        debug_printf("running in debug mode");
     }
+
     script = args_get_script(args);
     if (script != NULL) {
-        debug_printf("running scripting %s\n", script);
+        debug_printf("running scripting %s", script);
     }
 
     args_delete(args);
 
-    debug_printf("starting shell state\n");
+    debug_printf("starting shell state");
     init_shell_state();
 
-    debug_printf("started event loop\n");
+    debug_printf("started event loop");
     trigger_enter_hook();
     struct InputKey key = input_key_none();
 

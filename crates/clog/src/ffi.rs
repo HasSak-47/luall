@@ -1,6 +1,8 @@
 use std::ffi::{CStr, c_char, c_uint};
 
-use log::{Level as LogLevel, LevelFilter as LogLevelFilter, RecordBuilder, logger};
+use log::{
+    Level as LogLevel, LevelFilter as LogLevelFilter, MetadataBuilder, RecordBuilder, logger,
+};
 
 pub use pretty_env_logger;
 
@@ -37,27 +39,39 @@ generate_arms!(LogLevel, Level;, Error, Warn, Info, Debug, Trace);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn init_logger() {
-    pretty_env_logger::init();
+    pretty_env_logger::init_custom_env("LYRA_LOG");
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn set_log(level: Level) {
+pub extern "C" fn set_log_level(level: Level) {
     log::set_max_level(level.into());
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn rust_log(line: c_uint, file: *mut c_char, level: Level, msg: *mut c_char) {
+pub extern "C" fn get_log_level() -> Level {
+    return log::max_level().into();
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rust_log(level: Level, line: c_uint, file: *mut c_char, msg: *mut c_char) {
     let logger = logger();
 
     let msg = unsafe { CStr::from_ptr(msg) }.to_str().unwrap_or("???");
-    let file = unsafe { CStr::from_ptr(file) }.to_str().ok();
+    let file = if file.is_null() {
+        None
+    } else {
+        unsafe { CStr::from_ptr(file) }.to_str().ok()
+    };
+
     let args = format_args!("{}", msg);
+    // let meta = MetadataBuilder::new().level(level.into()).build();
     let r = RecordBuilder::new()
-        .line(Some(line))
-        .file(file)
         .level(level.into())
+        .line(if line != 0 { Some(line) } else { None })
+        .file(file)
         .args(args)
         .build();
 
     logger.log(&r);
+    logger.flush();
 }

@@ -11,7 +11,7 @@ static void __log_msg_varags(
     char* buf = NULL;
     vasprintf(&buf, fmt, arg);
 
-    rust_log(line, file, level, buf);
+    rust_log(level, line, file, buf);
 
     free(buf);
 }
@@ -19,7 +19,7 @@ static void __log_msg_varags(
 void __log_msg(enum Level level, int line, char* file, const char* fmt, ...) {
     va_list(args);
     va_start(args, fmt);
-    __log_msg_varags(LEVEL_ERROR, line, file, fmt, args);
+    __log_msg_varags(level, line, file, fmt, args);
     va_end(args);
 }
 

@@ -16,6 +16,7 @@
 #include <lua.h>
 #include <stdbool.h>
 
+#include "./bindgen_log.h"
 #include "./bindgen_plugin.h"
 #include "./input_key.h"
 #include "./path.h"
@@ -32,7 +33,8 @@ struct Vars {
     struct Path cwd;
     struct String host;
     int error;
-    bool debug;
+
+    enum Level log_level;
 };
 
 struct Config {

@@ -40,10 +40,10 @@ compileflags:
 
 rustbuild: $(OUT_RUST_LIB)
 
-$(OUT): $(OBJS)
+$(OUT): $(OUT_RUST_LIB) $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS)
 
-$(OUT_RUST_LIB): Cargo.toml
+$(OUT_RUST_LIB):
 	cargo build
 	cp $(SRC_RUST_LIB) $(OUT_RUST_LIB)
 	cbindgen -c ./cbindgen_plugin.toml --crate lyra_plugins --output include/bindgen_plugin.h

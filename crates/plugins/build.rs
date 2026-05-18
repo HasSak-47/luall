@@ -6,7 +6,6 @@ fn main() {
         .probe("lua")
         .unwrap();
     println!("cargo:rerun-if-changed=../../include/plugin.h");
-    println!("cargo:rerun-if-changed=../../include/bindgen.h");
     println!("cargo:rerun-if-changed=../../include/plugin_bindings.h");
 
     let mut bindings = bindgen::Builder::default()
