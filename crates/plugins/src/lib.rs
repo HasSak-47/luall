@@ -292,6 +292,7 @@ impl PluginManager {
         if !self.plugins.contains_key(name) {
             self.resolve(&name)?;
         }
+        log::debug!("loading plugin {name}");
 
         for dependency in self.plugins[name].manifest.dependecies.clone() {
             // load plugin only if it is resolved or is not optional

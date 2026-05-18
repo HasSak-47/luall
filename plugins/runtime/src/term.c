@@ -14,7 +14,7 @@ void unset_raw_mode() {
     if (got_original)
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
     else
-        log_debug("there is no original termios?");
+        log_warn("there is no original termios?");
 }
 
 void set_raw_mode() {
@@ -31,6 +31,7 @@ void set_raw_mode() {
     raw.c_cc[VTIME] = 1;
 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    log_debug("entered raw mode");
 }
 
 void enter_alternate_screen() {

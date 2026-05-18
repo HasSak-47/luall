@@ -43,10 +43,11 @@ int main(const int argc, const char* argv[]) {
     log_debug("starting shell state");
     init_shell_state();
 
-    log_debug("started event loop");
     trigger_enter_hook();
+    log_debug("started first input event");
     struct InputKey key = input_key_none();
 
+    log_debug("running...");
     while (state.is_running) {
         if (state.reload) {
             log_debug("reloading...");

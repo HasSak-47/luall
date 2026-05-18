@@ -92,6 +92,7 @@ static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
 void trigger_enter_hook() {
     log_debug("running enter hooks");
     for (size_t i = 0; i < state.hooks.len; ++i) {
+        log_debug("running hook #%lu", i);
         if (state.hooks.data[i].event == EVENT_ENTER) {
             run_event_enter_hook(&state.hooks.data[i]);
         }
@@ -413,17 +414,6 @@ static int lua_plugin_api_require(lua_State* L) {
             log_debug("failed to load plugin %s...", path);
             return 0;
         }
-    }
-
-    log_debug("dependecies:...");
-    const CIteratorString* iter =
-        get_plugin_dependecies_iterator(state.manager, path);
-
-    const char* next = NULL;
-    while ((next = next_plugin_name(iter)) != NULL) {
-        lua_pushcfunction(L, lua_plugin_api_require);
-        lua_pushstring(L, next);
-        lua_call(L, 1, 1);
     }
 
     struct PluginData* d    = get_plugin(state.manager, path);

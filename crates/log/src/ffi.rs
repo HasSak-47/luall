@@ -1,7 +1,7 @@
 use std::{
     ffi::{CStr, c_char, c_int, c_uint},
     fmt::Display,
-    os::fd::FromRawFd,
+    os::fd::{AsFd, AsRawFd, FromRawFd},
 };
 
 use log::{Level as LogLevel, LevelFilter as LogLevelFilter, RecordBuilder, logger};
@@ -59,6 +59,7 @@ pub extern "C" fn init_logger(fd: c_int) {
             let target = record.target();
             let max_target_width = crate::pretty::max_target_width(target);
             let level = record.level();
+            let line = record.line().unwrap_or(0);
 
             let level_style = Style::new().fg_color(Some(
                 match level {
@@ -74,7 +75,7 @@ pub extern "C" fn init_logger(fd: c_int) {
 
             writeln!(
                 f,
-                "{level_style}{level}{level_style:#} {target_style}{target:>max_target_width$}{target_style:#} > {}",
+                "{level_style}{level}{level_style:#} {target_style}{target:>max_target_width$}{target_style:#}:{line} > {}",
                 record.args(),
             )
         })
@@ -92,7 +93,13 @@ pub extern "C" fn get_log_level() -> Level {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn rust_log(level: Level, line: c_uint, file: *mut c_char, msg: *mut c_char) {
+pub unsafe extern "C" fn rust_log(
+    level: Level,
+    line: c_uint,
+    file: *const c_char,
+    target: *const c_char,
+    msg: *const c_char,
+) {
     if log::max_level() < log::LevelFilter::from(level) {
         return;
     }
@@ -104,11 +111,22 @@ pub unsafe extern "C" fn rust_log(level: Level, line: c_uint, file: *mut c_char,
     } else {
         unsafe { CStr::from_ptr(file) }.to_str().ok()
     };
+
+    let target = if target.is_null() {
+        "??".to_string()
+    } else {
+        unsafe { CStr::from_ptr(target) }
+            .to_str()
+            .unwrap_or("")
+            .to_string()
+    };
     let args = format_args!("{}", msg);
     let r = RecordBuilder::new()
         .level(level.into())
         .line(if line != 0 { Some(line) } else { None })
+        .target(&target)
         .file(file)
+        .target(file.unwrap_or(""))
         .module_path(file)
         .args(args)
         .build();

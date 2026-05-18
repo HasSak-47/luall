@@ -26,8 +26,9 @@ void init_logger(int fd);
 
 void rust_log(enum Level level,
               unsigned int line,
-              char *file,
-              char *msg);
+              const char *file,
+              const char *target,
+              const char *msg);
 
 void set_log_level(enum Level level);
 
