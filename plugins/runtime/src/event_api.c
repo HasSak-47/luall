@@ -23,7 +23,7 @@ int add_lua_event(lua_State* L) {
     luaL_checktype(L, 2, LUA_TFUNCTION);
     int reference = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    log_debug("binding lua funcion to a hook");
+    log_trace("binding lua funcion to a hook");
     struct Hook hook = {
         .kind = PLUGIN_KIND_LUA, .event = event, .reference = reference};
     vector_push(state.hooks, hook);

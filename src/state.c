@@ -77,7 +77,7 @@ static void run_event_exit_hook(struct Hook* hook) {
 }
 
 static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
-    log_debug("running input event");
+    log_trace("running input event");
     if (hook->kind == PLUGIN_KIND_C) {
         push_input_key(state.L, key);
         hook->actor(state.L);
@@ -604,7 +604,7 @@ void add_hook(enum Event event, Actor actor) {
 }
 
 void set_to_foreground() {
-    log_debug("setting to foreground\n");
+    log_debug("setting to foreground");
     const int FD = STDIN_FILENO;
     if (tcgetpgrp(FD) < 0)
         temporal_suicide_msg("could not get fd");

@@ -1,13 +1,15 @@
 use std::{
-    ffi::{CStr, c_char, c_uint},
+    ffi::{CStr, c_char, c_int, c_uint},
     fmt::Display,
+    os::fd::FromRawFd,
 };
 
-use log::{
-    Level as LogLevel, LevelFilter as LogLevelFilter, MetadataBuilder, RecordBuilder, logger,
-};
+use log::{Level as LogLevel, LevelFilter as LogLevelFilter, RecordBuilder, logger};
 
-pub use pretty_env_logger;
+use env_logger::{
+    Target,
+    fmt::style::{AnsiColor, Style},
+};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy)]
@@ -46,11 +48,36 @@ generate_arms!(LogLevelFilter, Level;, Off, Error, Warn, Info, Debug, Trace);
 generate_arms!(LogLevel, Level;, Error, Warn, Info, Debug, Trace);
 
 #[unsafe(no_mangle)]
-pub extern "C" fn init_logger() {
-    pretty_env_logger::formatted_builder()
+pub extern "C" fn init_logger(fd: c_int) {
+    let writter = unsafe { std::fs::File::from_raw_fd(fd) };
+    env_logger::builder()
+        .target(Target::Pipe(Box::new(writter)))
         .filter_level(LogLevelFilter::Trace)
-        .format_module_path(true)
-        .parse_env("LYRA_LOG")
+        .write_style(env_logger::WriteStyle::Always)
+        .format(|f, record| {
+            use std::io::Write;
+            let target = record.target();
+            let max_target_width = crate::pretty::max_target_width(target);
+            let level = record.level();
+
+            let level_style = Style::new().fg_color(Some(
+                match level {
+                    LogLevel::Trace => AnsiColor::Magenta,
+                    LogLevel::Debug => AnsiColor::Blue,
+                    LogLevel::Info => AnsiColor::Green,
+                    LogLevel::Warn => AnsiColor::Yellow,
+                    LogLevel::Error => AnsiColor::Red,
+                }
+                .into(),
+            ));
+            let target_style = Style::new().bold();
+
+            writeln!(
+                f,
+                "{level_style}{level}{level_style:#} {target_style}{target:>max_target_width$}{target_style:#} > {}",
+                record.args(),
+            )
+        })
         .init();
 }
 
@@ -66,6 +93,9 @@ pub extern "C" fn get_log_level() -> Level {
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rust_log(level: Level, line: c_uint, file: *mut c_char, msg: *mut c_char) {
+    if log::max_level() < log::LevelFilter::from(level) {
+        return;
+    }
     let logger = logger();
 
     let msg = unsafe { CStr::from_ptr(msg) }.to_str().unwrap_or("???");

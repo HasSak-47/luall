@@ -101,7 +101,7 @@ pid_t command_run(struct Command* p) {
     if (pid == 0) { // child
         log_debug("[child]: name: %s", p->cmd);
         if (p->foreground) {
-            log_debug("[child]: setting to foreground");
+            log_debug("setting to foreground");
             unset_raw_mode();
             set_to_foreground();
             log_debug("[child]: child is foreground");

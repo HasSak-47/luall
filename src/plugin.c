@@ -72,7 +72,7 @@ static void complile_c_plugin_no_makefile(
     log_debug("pushing units");
     for (size_t i = 0; i < compilation_units.len; ++i) {
         char* path_str = path_get_string(compilation_units.data[i]);
-        log_debug("\tpushing unit: %s @ %p", path_str, path_str);
+        log_trace("\tpushing unit: %s @ %p", path_str, path_str);
         vector_push(args, string_from_cstr(path_str));
 
         free(path_str);
@@ -88,7 +88,7 @@ static void complile_c_plugin_no_makefile(
     log_debug("copying from String to cstr");
     for (size_t i = 0; i < args.len; ++i) {
         argv[i] = string_to_cstring(args.data[i]);
-        log_debug("added: %s", argv[i]);
+        log_trace("added: %s", argv[i]);
     }
     argv[args.len] = NULL;
     pid_t pid      = fork();
@@ -148,7 +148,7 @@ static void complile_c_plugin_makefile(struct Path path, const char* object_str,
     log_debug("copying from String to cstr");
     for (size_t i = 0; i < args.len; ++i) {
         argv[i] = string_to_cstring(args.data[i]);
-        log_debug("added: %s", argv[i]);
+        log_trace("added: %s", argv[i]);
     }
     argv[args.len] = NULL;
     pid_t pid      = fork();
@@ -193,7 +193,7 @@ static void complile_c_plugin(const struct PluginData* data) {
     log_debug("searching for makefile in %lu paths", childs.len);
     for (size_t i = 0; i < childs.len; ++i) {
         struct String name = path_get_name(&childs.data[i]);
-        log_debug("\tfile: '%.*s': %lu", name.len, name.data, name.len);
+        log_trace("\tfile: '%.*s': %lu", name.len, name.data, name.len);
         for (size_t j = 0; j < name.len; ++j) {
             name.data[j] = tolower(name.data[j]);
         }

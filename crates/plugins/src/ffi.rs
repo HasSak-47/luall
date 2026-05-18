@@ -202,7 +202,6 @@ pub extern "C" fn get_plugin_dependecies_iterator(
 ) -> *const CIteratorString {
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
-    println!("path: {path}");
 
     let plugin = unsafe { (&*manager) }.plugins.get(&path).unwrap();
     let plugins = plugin

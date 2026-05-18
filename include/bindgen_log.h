@@ -22,7 +22,7 @@ enum Level {
 
 enum Level get_log_level(void);
 
-void init_logger(void);
+void init_logger(int fd);
 
 void rust_log(enum Level level,
               unsigned int line,

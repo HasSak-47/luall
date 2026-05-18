@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 int main(const int argc, const char* argv[]) {
-    init_logger();
+    init_logger(STDOUT_FILENO);
 
 #ifdef LY_TEST
     test_handler(argc, argv);
