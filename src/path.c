@@ -9,6 +9,7 @@
 #include <path.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "logs.h"
 
 static struct PathSegment build_segment(const struct String name) {
     // not optimal but meaningful!
@@ -184,6 +185,10 @@ TEST(get_path_name) {
 }
 
 void path_expand(struct Path* self, const struct Path* const cwd) {
+    if (cwd->_inner.data[0].ty != ROOT_PATH) {
+        log_error("tried to expand path using a relative CWD");
+        return;
+    }
     if (self->_inner.data[0].ty == CURR_PATH) {
         struct Path cpy = {};
 
@@ -207,6 +212,9 @@ void path_expand(struct Path* self, const struct Path* const cwd) {
 
         *self = cpy;
     }
+    else {
+    }
+
     return;
 }
 

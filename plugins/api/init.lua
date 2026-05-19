@@ -13,6 +13,7 @@ local function expand_path(path)
     end
 
     local parsed = lyra.api.path.parse(path)
+
     parsed:expand_path(lyra.vars.cwd)
     return parsed
 end
@@ -109,14 +110,14 @@ local function setup_extension_namespace()
             cd = function(args)
                 local target = nil
                 if args == nil or #args == 0 then
-                    target = lyra.state.vars.user.home
+                    target = lyra.core.state.vars.user.home
                 else
                     target = expand_path(args[1])
                 end
 
                 local ok, err = lyra.core.api.cd(target)
                 if not ok and err ~= nil then
-                    print(err)
+                    lyra.core.api.log.debug(err)
                 end
             end,
 
@@ -127,9 +128,9 @@ local function setup_extension_namespace()
 
                 local func = load(args[1])
                 if func ~= nil then
-                    local ok = pcall(func)
+                    local ok, obj = pcall(func)
                     if not ok then
-                        print("failed to run")
+                        print("failed to run lua code: " .. args[1] .. '\n' .. obj)
                     end
                 end
             end,

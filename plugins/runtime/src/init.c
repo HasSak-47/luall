@@ -4,6 +4,7 @@
 #include <plugin/definitions.h>
 
 #include <event_api.h>
+#include <log_api.h>
 #include <logs.h>
 #include <path_api.h>
 #include <process.h>
@@ -61,6 +62,7 @@ int plugin_setup(lua_State* L) {
     process_setup_lua_api(L);
     path_setup_lua_api(L);
     state_setup_lua_api(L);
+    log_setup_lua_api(L);
     event_setup_lua_api(L);
 
     return 0;

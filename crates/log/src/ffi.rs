@@ -100,7 +100,7 @@ pub unsafe extern "C" fn rust_log(
     target: *const c_char,
     msg: *const c_char,
 ) {
-    if log::max_level() < log::LevelFilter::from(level) {
+    if log::LevelFilter::from(level) > log::max_level() {
         return;
     }
     let logger = logger();

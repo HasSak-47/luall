@@ -265,7 +265,7 @@ end
 local function handle_singleline(line)
     local start = line:find("lua", 1, true)
     if start == 1 then
-        lyra.api.lua({ line:gsub("^lua%s*", "", 1) })
+        lyra.api.builtin.lua({ line:gsub("^lua%s*", "", 1) })
     else
         handle_shell_like(line)
     end

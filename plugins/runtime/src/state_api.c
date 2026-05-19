@@ -7,6 +7,7 @@
 
 #include <path_api.h>
 #include <state_api.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <term.h>
 
@@ -15,6 +16,8 @@
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include "bindgen_log.h"
+#include "logs.h"
 #include "ly_string.h"
 #include "path.h"
 
@@ -139,13 +142,20 @@ int newindex_state(lua_State* L) {
 }
 
 int newindex_state_vars(lua_State* L) {
-    const char* name = lua_tostring(L, 2);
+    const char* name = lua_tostring(L, -2);
+    log_debug("setting to new index: %s", name);
     if (strcmp(name, "error") == 0) {
-        state.vars.error = luaL_checkinteger(L, 3);
+        state.vars.error = luaL_checkinteger(L, -1);
+        log_debug("setting error code to: %d", state.vars.error);
+        return 0;
     }
     else if (strcmp(name, "debug") == 0) {
-        state.vars.log_level = lua_toboolean(L, 3) ? LEVEL_DEBUG : LEVEL_WARN;
+        state.vars.log_level = lua_toboolean(L, -1) ? LEVEL_DEBUG : LEVEL_WARN;
+        set_log_level(state.vars.log_level);
+        log_warn("set log level to: %lu", state.vars.log_level);
+        return 0;
     }
+    log_error("failed to set new index: %s", name);
     return 0;
 }
 
@@ -170,6 +180,7 @@ int lua_leave_alternate_screen(lua_State* _) {
 }
 
 int lua_change_cwd(lua_State* L) {
+    log_debug("changing cwd");
     struct Path path     = {};
     bool should_destruct = false;
 
@@ -186,6 +197,7 @@ int lua_change_cwd(lua_State* L) {
     }
 
     char* path_str = path_get_string(path);
+    log_debug("setting path to: %s", path_str);
     if (chdir(path_str) != 0) {
         int error = errno;
         if (should_destruct) {

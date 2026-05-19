@@ -1,5 +1,5 @@
-#ifndef __STRING_API_H__
-#define __STRING_API_H__
+#ifndef __PATH_API_H__
+#define __PATH_API_H__
 
 #include <lua.h>
 #define LUA_PATH_MT "lyra.api.path"
