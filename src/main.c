@@ -66,6 +66,7 @@ int main(const int argc, const char* argv[]) {
             trigger_input_hook(key);
         }
     }
+    log_debug("running exit hooks");
     trigger_exit_hook();
     end_shell_state();
     return 0;

@@ -7,6 +7,7 @@
 
 #include <ly_string.h>
 #include <process.h>
+#include "logs.h"
 
 #define LUA_COMMAND_MT "lyra.core.api.process.command"
 #define LUA_PIPE_MT "lyra.core.api.process.pipe"
@@ -56,6 +57,7 @@ static int lua_pipe_close(lua_State* L) {
 
 static int lua_pipe_gc(lua_State* L) {
     struct Pipe* p = check_pipe(L, 1);
+    log_debug("cleaing pipe %p", p);
     pipe_close(p);
     return 0;
 }
@@ -158,6 +160,7 @@ static int lua_command_get_foreground(lua_State* L) {
 
 static int lua_command_gc(lua_State* L) {
     struct Command* cmd = check_command(L, 1);
+    log_debug("cleaing cmd%p", cmd);
     (void)cmd;
     return 0;
 }

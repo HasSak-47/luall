@@ -14,9 +14,9 @@ LUA_LIBS := $(shell pkg-config --libs lua5.4 2>/dev/null || pkg-config --libs lu
 
 OBJ_DIR := .ignore/build
 
-SRCS := $(wildcard $(SRC_DIR)/*.c) \
-        $(wildcard $(SRC_DIR)/**/*.c)
+SRCS := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/**/*.c)
 
+RUST_SRCS = $(wildcard crates/**/*.rs)
 OUT_RUST_LIB := $(OBJ_DIR)/liblyra.so
 SRC_RUST_LIB := target/debug/liblyra.so
 
@@ -28,10 +28,10 @@ OBJ_DIRS := $(sort $(dir $(OBJS)))
 OUT := lyra
 
 CC := gcc
-CFLAGS := -g -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
+CFLAGS := -O3 -g3 -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
 LDFLAGS := -o $(OUT) -export-dynamic $(LUA_LIBS)
 
-build: $(OBJ_DIRS) $(OUT)
+build: $(OBJ_DIRS) rustbuild $(OUT)
 
 compileflags:
 	@echo -I  > compile_flags.txt
@@ -44,7 +44,7 @@ rustbuild: $(OUT_RUST_LIB)
 $(OUT): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS)
 
-$(OUT_RUST_LIB): | $(OBJ_DIRS)
+$(OUT_RUST_LIB): $(RUST_SRCS)| $(OBJ_DIRS)
 	cargo build
 	cp $(SRC_RUST_LIB) $(OUT_RUST_LIB)
 	cbindgen -c ./cbindgen_plugin.toml --crate lyra_plugins --output include/bindgen_plugin.h

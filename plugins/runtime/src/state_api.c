@@ -26,10 +26,6 @@
 #define LUA_STATE_VARS_USER_MT "lyra.state.vars.user"
 #define LUA_STATE_VARS_ENV_MT "lyra.state.vars.env"
 
-static struct Path* check_path(lua_State* L, int idx) {
-    return (struct Path*)luaL_checkudata(L, idx, LUA_PATH_MT);
-}
-
 // NOTE: maybe it would be neet to have it behave like a table if there are
 // multiple values like in PATH
 int index_state_vars_env(lua_State* L) {

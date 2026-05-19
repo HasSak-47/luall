@@ -41,14 +41,14 @@ struct PluginHandler *get_plugin_handler(struct PluginData *plugin);
 
 const CIteratorString *get_plugin_iterator(struct PluginManager *manager);
 
-char manager_is_plugin_loaded(struct PluginManager *manager_ptr,
-                              const char *path);
+char manager_is_plugin_prepared(struct PluginManager *manager_ptr,
+                                const char *path);
 
 int manager_is_plugin_resolved(struct PluginManager *manager,
                                const char *path);
 
-int32_t manager_load_plugin(struct PluginManager *manager_ptr,
-                            const char *path);
+int32_t manager_prepare_plugin(struct PluginManager *manager_ptr,
+                               const char *path);
 
 struct PluginData *manager_resolve_plugin(struct PluginManager *manager_ptr,
                                           const char *path);

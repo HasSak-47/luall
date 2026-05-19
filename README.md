@@ -69,7 +69,7 @@ There are two plugin kinds: C plugins loaded as shared objects, and Lua plugins 
 The lifecycle is simple:
 
 - `resolve` reads the manifest and dependency graph
-- `load` prepares the plugin handler
+- `prepare` prepares the plugin handler
 - `setup` stores options for later activation
 - `require` activates the plugin and returns its exported table
 
@@ -87,7 +87,7 @@ Plugin-local Lua modules are private to the plugin that owns them. A plugin can 
 The shell exposes a global `lyra` table to Lua. Before core plugins load, it is mostly a bootstrap surface for plugin management.
 
 - `lyra.plugin.resolve(url)`
-- `lyra.plugin.load(url)`
+- `lyra.plugin.prepare(url)`
 - `lyra.plugin.setup(url, opts?)`
 - `lyra.plugin.require(url, opts?)`
 - `lyra.plugin.destroy(url)`

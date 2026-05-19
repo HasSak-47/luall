@@ -221,7 +221,7 @@ static void complile_c_plugin(const struct PluginData* data) {
     free(name_str);
 }
 
-static struct PluginHandler _load_binary_plugin(const char* path) {
+static struct PluginHandler _prepare_binary_plugin(const char* path) {
     struct PluginHandler handler = {};
     handler.handler              = dlopen(path, RTLD_LAZY);
     handler.setup                = dlsym(handler.handler, "plugin_setup");
@@ -230,27 +230,27 @@ static struct PluginHandler _load_binary_plugin(const char* path) {
     return handler;
 }
 
-struct PluginHandler load_binary_plugin(const struct PluginData* p) {
+struct PluginHandler prepare_binary_plugin(const struct PluginData* p) {
     struct PluginHandler c =
-        _load_binary_plugin(plugin_get_shared_object_path(p));
+        _prepare_binary_plugin(plugin_get_shared_object_path(p));
     c.kind = PLUGIN_KIND_BINARY;
     return c;
 }
 
-struct PluginHandler load_c_plugin(const struct PluginData* p) {
+struct PluginHandler prepare_c_plugin(const struct PluginData* p) {
     complile_c_plugin(p);
     struct PluginHandler c =
-        _load_binary_plugin(plugin_get_shared_object_path(p));
+        _prepare_binary_plugin(plugin_get_shared_object_path(p));
     c.kind = PLUGIN_KIND_C;
 
     return c;
 }
 
-struct PluginHandler load_rust_plugin(const struct PluginData* p) {
+struct PluginHandler prepare_rust_plugin(const struct PluginData* p) {
     return (struct PluginHandler){};
 }
 
-struct PluginHandler load_lua_plugin(const struct PluginData* p) {
+struct PluginHandler prepare_lua_plugin(const struct PluginData* p) {
     return (struct PluginHandler){
         .kind = PLUGIN_KIND_LUA, .lua_path = plugin_get_data_path(p)};
 }

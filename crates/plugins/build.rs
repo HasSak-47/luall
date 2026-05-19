@@ -25,10 +25,10 @@ fn main() {
 
     let allows = [
         "PluginHandler",
-        "load_lua_plugin",
-        "load_c_plugin",
-        "load_binary_plugin",
-        "load_rust_plugin",
+        "prepare_lua_plugin",
+        "prepare_c_plugin",
+        "prepare_binary_plugin",
+        "prepare_rust_plugin",
         "unload_lua_plugin",
         "unload_c_plugin",
         "unload_binary_plugin",

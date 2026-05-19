@@ -124,9 +124,9 @@ static int lua_plugin_api_resolve(lua_State* L) {
     return 0;
 }
 
-static int lua_plugin_api_load(lua_State* L) {
+static int lua_plugin_api_prepare(lua_State* L) {
     const char* path = lua_tostring(L, 1);
-    manager_load_plugin(state.manager, path);
+    manager_prepare_plugin(state.manager, path);
     return 0;
 }
 
@@ -408,10 +408,10 @@ static int register_plugin_module_paths(lua_State* L, const char* plugin_path) {
 
 static int lua_plugin_api_require(lua_State* L) {
     const char* path = lua_tostring(L, 1);
-    if (!manager_is_plugin_loaded(state.manager, path)) {
-        log_debug("loading plugin %s", path);
-        if (manager_load_plugin(state.manager, path) == -1) {
-            log_debug("failed to load plugin %s...", path);
+    if (!manager_is_plugin_prepared(state.manager, path)) {
+        log_debug("preparing plugin %s", path);
+        if (manager_prepare_plugin(state.manager, path) == -1) {
+            log_debug("failed to prepare plugin %s...", path);
             return 0;
         }
     }
@@ -419,6 +419,7 @@ static int lua_plugin_api_require(lua_State* L) {
     struct PluginData* d    = get_plugin(state.manager, path);
     struct PluginHandler* h = get_plugin_handler(d);
 
+    log_debug("loading plugin %s", path);
     switch (plugin_get_kind(d)) {
     case PLUGIN_KIND_C:
     case PLUGIN_KIND_RUST:
@@ -451,7 +452,7 @@ static int lua_plugin_api_require(lua_State* L) {
 
         if (!lua_istable(L, -1)) {
             return luaL_error(L,
-                "failed to load lua plugin '%s': entrypoint must return a table",
+                "failed to require lua plugin '%s': entrypoint must return a table",
                 path);
         }
 
@@ -476,7 +477,7 @@ static int lua_plugin_api_require(lua_State* L) {
             }
             else if (!lua_istable(L, -1)) {
                 return luaL_error(L,
-                    "failed to load lua plugin '%s': setup must return a table "
+                    "failed to require lua plugin '%s': setup must return a table "
                     "or nil",
                     path);
             }
@@ -487,7 +488,7 @@ static int lua_plugin_api_require(lua_State* L) {
 
         if (lua_gettop(L) == 0 || !lua_istable(L, -1)) {
             return luaL_error(L,
-                "failed to load lua plugin '%s': no exports table produced",
+                "failed to require lua plugin '%s': no exports table produced",
                 path);
         }
 
@@ -509,8 +510,8 @@ void init_plugin_table() {
     lua_pushcfunction(state.L, lua_plugin_api_resolve);
     lua_setfield(state.L, -2, "resolve");
 
-    lua_pushcfunction(state.L, lua_plugin_api_load);
-    lua_setfield(state.L, -2, "load");
+    lua_pushcfunction(state.L, lua_plugin_api_prepare);
+    lua_setfield(state.L, -2, "prepare");
 
     lua_pushcfunction(state.L, lua_plugin_api_require);
     lua_setfield(state.L, -2, "require");
@@ -532,7 +533,7 @@ void init_shell_state() {
     lua_newtable(state.L);
     init_plugin_table();
     // NOTE: maybe rename to bootstrap
-    // since it is meant to be just used to load core lol
+    // since it is meant to be just used to prepare core lol
     lua_setfield(state.L, -2, "plugin");
     lua_pushlightuserdata(state.L, &state);
     lua_setfield(state.L, -2, "state");
@@ -562,7 +563,10 @@ void get_current_state() {}
  * cleanins the shell state
  */
 void end_shell_state() {
-    delete_plugin_manager(state.manager);
+    log_debug("closing lua %p", state.L);
+    lua_close(state.L);
+
+    log_debug("cleanin shell state");
     free(state.vars.host.data);
     free(state.vars.user.name.data);
 
@@ -574,12 +578,20 @@ void end_shell_state() {
     const CIteratorString* iter = get_plugin_iterator(state.manager);
     const char* next            = NULL;
 
+    log_debug("unloading plugins");
     while ((next = next_plugin_name(iter)) != NULL) {
         manager_unload_plugin(state.L, state.manager, next);
     }
 
-    lua_close(state.L);
-    free(state.hooks.data);
+    log_debug("deleting pluging manager");
+    delete_plugin_manager(state.manager);
+
+    log_debug("removing hooks {}");
+    if (state.hooks.data != NULL) {
+        free(state.hooks.data);
+        state.hooks.data = NULL;
+    }
+    log_debug("setting state to {}");
     state = (struct ShellState){};
 }
 

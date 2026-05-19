@@ -15,8 +15,8 @@ impl PluginHandlerWrapper {
         return self.handler.is_some();
     }
 
-    pub fn load_plugin(&mut self, data: &PluginData) -> Result<()> {
-        macro_rules! load_plugin {($($kind:path => $function:path, )+) => {
+    pub fn prepare_plugin(&mut self, data: &PluginData) -> Result<()> {
+        macro_rules! prepare_plugin {($($kind:path => $function:path, )+) => {
             match data.manifest.header.kind {
                 $($kind => $function((data as *const PluginData).cast()),)+
                 #[allow(unreachable_patterns)]
@@ -25,11 +25,11 @@ impl PluginHandlerWrapper {
         }
 
         self.handler = Some(unsafe {
-            load_plugin!(
-                PluginKind::Lua => rb::load_lua_plugin,
-                PluginKind::C => rb::load_c_plugin,
-                PluginKind::Rust => rb::load_rust_plugin,
-                PluginKind::BINARY => rb::load_binary_plugin,
+            prepare_plugin!(
+                PluginKind::Lua => rb::prepare_lua_plugin,
+                PluginKind::C => rb::prepare_c_plugin,
+                PluginKind::Rust => rb::prepare_rust_plugin,
+                PluginKind::BINARY => rb::prepare_binary_plugin,
             )
         });
 

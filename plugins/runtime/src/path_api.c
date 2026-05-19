@@ -8,8 +8,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "logs.h"
 
-static struct Path* check_path(lua_State* L, int idx) {
+struct Path* check_path(lua_State* L, int idx) {
     return (struct Path*)luaL_checkudata(L, idx, LUA_PATH_MT);
 }
 
@@ -98,6 +99,7 @@ static int lua_get_name(lua_State* L) {
 
 static int lua_path_gc(lua_State* L) {
     struct Path* path = check_path(L, -1);
+    log_debug("cleaing cmd %p", path);
     path_destruct(path);
     return 0;
 }

@@ -100,12 +100,12 @@ pub extern "C" fn manager_unload_plugin(
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn manager_load_plugin(manager_ptr: *mut PluginManager, path: *const c_char) -> i32 {
+pub extern "C" fn manager_prepare_plugin(manager_ptr: *mut PluginManager, path: *const c_char) -> i32 {
     let manager = unsafe { &mut (*manager_ptr) };
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
 
-    if manager.load_plugin(&path).is_err() {
+    if manager.prepare_plugin(&path).is_err() {
         return -1;
     }
 
@@ -132,7 +132,7 @@ pub extern "C" fn get_plugin(
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn manager_is_plugin_loaded(
+pub extern "C" fn manager_is_plugin_prepared(
     manager_ptr: *mut PluginManager,
     path: *const c_char,
 ) -> c_char {
@@ -140,7 +140,7 @@ pub extern "C" fn manager_is_plugin_loaded(
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();
 
-    return manager.is_plugin_loaded(&path) as c_char;
+    return manager.is_plugin_prepared(&path) as c_char;
 }
 
 #[allow(unused)]
@@ -222,7 +222,7 @@ pub extern "C" fn get_plugin_dependecies_iterator(
 #[allow(unused)]
 #[unsafe(no_mangle)]
 pub extern "C" fn get_plugin_iterator(manager: *mut PluginManager) -> *const CIteratorString {
-    let plugins = unsafe { (&*manager).get_loaded_plugins() }
+    let plugins = unsafe { (&*manager).get_prepared_plugins() }
         .into_iter()
         .map(url::Url::as_str)
         .map(CString::new)

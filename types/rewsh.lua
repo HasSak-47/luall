@@ -7,7 +7,7 @@
 
 ---@class LyraPluginApi
 ---@field resolve fun(url: string): LyraPluginData|nil
----@field load fun(url: string): LyraPluginData|nil
+---@field prepare fun(url: string): LyraPluginData|nil
 ---@field config LyraPluginConfig
 ---@field require fun(url: string, opts: table|nil): LyraPluginExports
 ---@field destroy fun(url: string): nil

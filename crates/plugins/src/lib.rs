@@ -191,7 +191,10 @@ impl PluginData {
         // TODO: add toggle to set to a normal filesytem path
         let mut plugin_path = std::path::absolute(PathBuf::from("./plugins"))?;
         plugin_path.push(source.host_str().unwrap());
-        log::debug!("loading core plugin: {source} @ {}", plugin_path.display());
+        log::debug!(
+            "resolving core plugin: {source} @ {}",
+            plugin_path.display()
+        );
 
         return Self::_resolve_from_disk(plugin_path, source, SourceKind::CORE);
     }
@@ -230,12 +233,12 @@ impl PluginData {
 #[derive(Debug, Default)]
 pub struct PluginManager {
     plugins: HashMap<url::Url, PluginData>,
-    loaded_plugins: HashSet<url::Url>,
+    prepared_plugins: HashSet<url::Url>,
 }
 
 impl PluginManager {
     /*
-     * 'load' makes finding a plugin and loading it's manifest to the manager
+     * 'resolve' finds a plugin and loads its manifest into the manager
      */
     pub fn resolve(&mut self, path: &url::Url) -> Result<&mut PluginData> {
         if self.plugins.contains_key(path) {
@@ -257,8 +260,8 @@ impl PluginManager {
         return Ok(self.plugins.get_mut(&path).unwrap());
     }
 
-    pub fn is_plugin_loaded(&mut self, name: &url::Url) -> bool {
-        return self.loaded_plugins.contains(name);
+    pub fn is_plugin_prepared(&mut self, name: &url::Url) -> bool {
+        return self.prepared_plugins.contains(name);
     }
 
     pub fn get_plugin(&mut self, name: &url::Url) -> Option<&mut PluginData> {
@@ -275,7 +278,7 @@ impl PluginManager {
         lua: *mut raw_bindings::lua_State,
     ) -> Result<()> {
         if !self.plugins.contains_key(name) {
-            self.resolve(&name)?;
+            return Ok(());
         }
 
         let data = &mut self.plugins.get_mut(name).unwrap();
@@ -286,19 +289,19 @@ impl PluginManager {
     }
 
     /*
-     * 'load' loads a plugin into the memory but does not run it
+     * 'prepare' loads a plugin into memory but does not run it
      */
-    pub fn load_plugin(&mut self, name: &url::Url) -> Result<()> {
+    pub fn prepare_plugin(&mut self, name: &url::Url) -> Result<()> {
         if !self.plugins.contains_key(name) {
             self.resolve(&name)?;
         }
-        log::debug!("loading plugin {name}");
+        log::debug!("preparing plugin {name}");
 
         for dependency in self.plugins[name].manifest.dependecies.clone() {
-            // load plugin only if it is resolved or is not optional
+            // prepare plugin only if it is resolved or is not optional
             if !dependency.optional && self.plugins.contains_key(name) {
                 if let Some(source) = &dependency.source {
-                    self.load_plugin(source)?;
+                    self.prepare_plugin(source)?;
                 }
             }
         }
@@ -306,13 +309,14 @@ impl PluginManager {
         let data = &mut self.plugins.get_mut(name).unwrap();
 
         let mut handler = std::mem::take(&mut data.handler);
-        handler.load_plugin(data)?;
+        handler.prepare_plugin(data)?;
         data.handler = handler;
+        self.prepared_plugins.insert(name.clone());
         return Ok(());
     }
 
-    pub fn get_loaded_plugins(&self) -> &HashSet<url::Url> {
-        return &self.loaded_plugins;
+    pub fn get_prepared_plugins(&self) -> &HashSet<url::Url> {
+        return &self.prepared_plugins;
     }
 }
 
