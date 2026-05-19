@@ -10,78 +10,9 @@
 #include "logs.h"
 
 #define LUA_COMMAND_MT "lyra.core.api.process.command"
-#define LUA_PIPE_MT "lyra.core.api.process.pipe"
 
 static struct Command* check_command(lua_State* L, int idx) {
     return (struct Command*)luaL_checkudata(L, idx, LUA_COMMAND_MT);
-}
-
-static struct Pipe* check_pipe(lua_State* L, int idx) {
-    return (struct Pipe*)luaL_checkudata(L, idx, LUA_PIPE_MT);
-}
-
-static enum BindType lua_check_bind_type(lua_State* L, int idx) {
-    if (lua_isinteger(L, idx)) {
-        return (enum BindType)lua_tointeger(L, idx);
-    }
-
-    const char* s = luaL_checkstring(L, idx);
-    if (strcmp(s, "read") == 0)
-        return ReadBind;
-    if (strcmp(s, "write") == 0)
-        return WriteBind;
-    if (strcmp(s, "error") == 0)
-        return ErrorBind;
-    if (strcmp(s, "none") == 0)
-        return NoneBind;
-
-    return (enum BindType)luaL_error(L, "invalid bind type '%s'", s);
-}
-
-/* ---------- Pipe ---------- */
-
-static int lua_pipe_new(lua_State* L) {
-    struct Pipe* p = (struct Pipe*)lua_newuserdata(L, sizeof(struct Pipe));
-    *p             = pipe_new();
-
-    luaL_getmetatable(L, LUA_PIPE_MT);
-    lua_setmetatable(L, -2);
-    return 1;
-}
-
-static int lua_pipe_close(lua_State* L) {
-    struct Pipe* p = check_pipe(L, 1);
-    pipe_close(p);
-    return 0;
-}
-
-static int lua_pipe_gc(lua_State* L) {
-    struct Pipe* p = check_pipe(L, 1);
-    log_debug("cleaing pipe %p", p);
-    pipe_close(p);
-    return 0;
-}
-
-static int lua_pipe_read(lua_State* L) {
-    struct Pipe* p    = check_pipe(L, 1);
-    struct String str = pipe_read(p);
-    char* s           = string_to_cstring(str);
-    lua_pushstring(L, s);
-
-    free(s);
-    free(str.data);
-
-    return 0;
-}
-
-static int lua_pipe_write(lua_State* L) {
-    struct Pipe* p     = check_pipe(L, 1);
-    const char* s      = lua_tostring(L, 2);
-    struct String data = string_from_cstr(s);
-    pipe_write(p, data);
-    free(data.data);
-
-    return 0;
 }
 
 /* ---------- Command ---------- */
@@ -167,19 +98,6 @@ static int lua_command_gc(lua_State* L) {
 
 /* ---------- method tables ---------- */
 
-static const luaL_Reg pipe_methods[] = {
-    {"close", lua_pipe_close},
-    {"write", lua_pipe_write},
-    { "read",  lua_pipe_read},
-    {"close", lua_pipe_close},
-    {   NULL,           NULL}
-};
-
-static const luaL_Reg pipe_meta[] = {
-    {"__gc", lua_pipe_gc},
-    {  NULL,        NULL}
-};
-
 static const luaL_Reg command_methods[] = {
     {  "reserve_size",   lua_command_reserve_size},
     {       "add_arg",        lua_command_add_arg},
@@ -210,26 +128,11 @@ static void create_command_metatable(lua_State* L) {
     lua_pop(L, 1);
 }
 
-static void create_pipe_metatable(lua_State* L) {
-    if (luaL_newmetatable(L, LUA_PIPE_MT)) {
-        luaL_setfuncs(L, pipe_meta, 0);
-
-        lua_newtable(L);
-        luaL_setfuncs(L, pipe_methods, 0);
-        lua_setfield(L, -2, "__index");
-    }
-
-    lua_pop(L, 1);
-}
-
 static void push_process_module(lua_State* L) {
     lua_newtable(L);
 
     lua_pushcfunction(L, lua_command_new);
     lua_setfield(L, -2, "command");
-
-    lua_pushcfunction(L, lua_pipe_new);
-    lua_setfield(L, -2, "pipe");
 
     lua_pushcfunction(L, lua_process_wait);
     lua_setfield(L, -2, "wait");
@@ -251,7 +154,6 @@ static void push_process_module(lua_State* L) {
 
 void process_setup_lua_api(lua_State* L) {
     create_command_metatable(L);
-    create_pipe_metatable(L);
 
     lua_getglobal(L, "lyra");
 

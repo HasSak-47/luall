@@ -233,7 +233,7 @@ local function run_piped(tokens)
         out:add_arg(arg)
     end
 
-    local pipe = lyra.api.process.pipe()
+    local pipe = lyra.api.io.pipe()
     src:bind_pipe(pipe, "write")
     if tokens[2].val == "|&" then
         src:bind_pipe(pipe, lyra.api.process.WRITE + lyra.api.process.ERROR)
@@ -246,7 +246,7 @@ local function run_piped(tokens)
 
     local src_status = src:wait()
     local out_status = out:wait()
-    lyra.state.vars.error = out_status ~= 0 and out_status or src_status
+    lyra.vars.error = out_status ~= 0 and out_status or src_status
 end
 
 ---@param line string

@@ -26,20 +26,6 @@
  * cmd |& cmd === cmd 2>&1 | cmd
  */
 
-struct Pipe pipe_new() {
-    struct Pipe p = {};
-    int r         = pipe(p.p);
-    if (r < 0)
-        temporal_suicide_msg("failed to create new pipe");
-
-    return p;
-}
-
-void pipe_close(struct Pipe* p) {
-    close(p->p[0]);
-    close(p->p[1]);
-}
-
 /**
  * takes an string cmd and clones it
  */
@@ -175,28 +161,4 @@ int process_wait(pid_t pid) {
     set_raw_mode();
 
     return status;
-}
-
-#define BUFFER_LEN 256
-
-struct String pipe_read(struct Pipe* p) {
-    struct String str       = {};
-    char buffer[BUFFER_LEN] = {};
-    size_t bytes_read       = read(p->p[0], buffer, BUFFER_LEN);
-
-    size_t iters = 0;
-    while (bytes_read != 0) {
-        vector_reserve(str, str.cap + BUFFER_LEN);
-        for (size_t i = 0; i < BUFFER_LEN; ++i) {
-            str.data[iters * BUFFER_LEN + i] = buffer[i];
-        }
-        iters += 1;
-        bytes_read = read(p->p[0], buffer, BUFFER_LEN);
-    }
-
-    return str;
-}
-
-void pipe_write(struct Pipe* p, struct String data) {
-    write(p->p[1], data.data, data.len);
 }
