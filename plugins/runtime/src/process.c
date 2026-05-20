@@ -70,7 +70,7 @@ pid_t command_run(struct Command* p) {
         if (p->foreground) {
             log_debug("setting to foreground");
             unset_raw_mode();
-            set_to_foreground();
+            // set_to_foreground();
             log_debug("[child]: child is foreground");
         }
         log_debug("[child]: setting io binds");
@@ -118,7 +118,7 @@ int process_wait(pid_t pid) {
         temporal_suicide_msg("[parent]: waitpid failed");
     }
 
-    set_to_foreground();
+    // set_to_foreground();
     set_raw_mode();
 
     return status;

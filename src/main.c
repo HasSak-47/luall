@@ -10,6 +10,8 @@
 #include <lualib.h>
 
 #include <dlfcn.h>
+#include <stdlib.h>
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -21,8 +23,12 @@ int main(const int argc, const char* argv[]) {
     return 0;
 #else
 
-    struct Args* args  = NULL;
-    const char* script = NULL;
+    struct Args* args       = NULL;
+    const char* script      = NULL;
+    const char* config_path = NULL;
+    const char* cache_path  = NULL;
+    char* config_path_copy  = NULL;
+    char* cache_path_copy   = NULL;
 
     args = args_parse(argc, argv);
 
@@ -38,10 +44,19 @@ int main(const int argc, const char* argv[]) {
         log_debug("running scripting %s", script);
     }
 
+    config_path = args_get_config_path(args);
+    cache_path  = args_get_cache_path(args);
+    if (config_path != NULL) {
+        config_path_copy = strdup(config_path);
+    }
+    if (cache_path != NULL) {
+        cache_path_copy = strdup(cache_path);
+    }
+
     args_delete(args);
 
     log_debug("starting shell state");
-    init_shell_state();
+    init_shell_state(config_path_copy, cache_path_copy);
 
     trigger_enter_hook();
     log_debug("started first input event");
@@ -56,7 +71,7 @@ int main(const int argc, const char* argv[]) {
             log_debug("ending current state...");
             end_shell_state();
             log_debug("initing current state...");
-            init_shell_state();
+            init_shell_state(config_path_copy, cache_path_copy);
             log_debug("running enter hooks after reload...");
             trigger_enter_hook();
             state.reload = false;
@@ -69,6 +84,8 @@ int main(const int argc, const char* argv[]) {
     log_debug("running exit hooks");
     trigger_exit_hook();
     end_shell_state();
+    free(config_path_copy);
+    free(cache_path_copy);
     return 0;
 #endif
 }

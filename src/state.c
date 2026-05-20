@@ -39,13 +39,12 @@ void init_shell_variables() {
     state.vars.cwd = path_parse(buf);
 }
 
-void init_shell_config() {
-    state.manager        = new_plugin_manager();
-    state.config.plugins = path_parse(PLUGIN_PATH);
-    state.config.config  = path_parse(CONFIG_PATH);
-    state.config.cache   = path_parse(CACHE_PATH);
+void init_shell_config(const char* config_path, const char* cache_path) {
+    state.manager       = new_plugin_manager();
+    state.config.config = path_parse(
+        config_path != NULL ? config_path : CONFIG_PATH);
+    state.config.cache = path_parse(cache_path != NULL ? cache_path : CACHE_PATH);
 
-    path_expand(&state.config.plugins, &state.vars.cwd);
     path_expand(&state.config.config, &state.vars.cwd);
     path_expand(&state.config.cache, &state.vars.cwd);
 }
@@ -526,7 +525,7 @@ void init_plugin_table() {
 /**
  * sets the state of the shell
  */
-void init_shell_state() {
+void init_shell_state(const char* config_path, const char* cache_path) {
     state.L = luaL_newstate();
     // luaL_openlibs(state.L);
     create_input_key_metatable(state.L);
@@ -541,7 +540,7 @@ void init_shell_state() {
     lua_setglobal(state.L, "lyra");
 
     init_shell_variables();
-    init_shell_config();
+    init_shell_config(config_path, cache_path);
 
     char* path = path_get_string(state.config.config);
     log_debug("running init: %s", path);
@@ -572,7 +571,6 @@ void end_shell_state() {
 
     path_destruct(&state.vars.cwd);
     path_destruct(&state.vars.user.home);
-    path_destruct(&state.config.plugins);
     path_destruct(&state.config.config);
 
     const CIteratorString* iter = get_plugin_iterator(state.manager);

@@ -44,12 +44,20 @@ struct FileHandler file_handler_open(struct Path path, enum OpenMode flags) {
     else if ((flags & OPEN_MODE_WRITE)) {
         o_flag += O_WRONLY;
     }
+    if (flags & OPEN_MODE_APPEND) {
+        o_flag += O_APPEND;
+    }
+    if (flags & OPEN_MODE_TRUNC) {
+        o_flag += O_TRUNC;
+    }
     int mask = umask(0);
     umask(mask);
 
     int fd = open(file, o_flag, 0666 & ~mask);
+    free(file);
     return (struct FileHandler){
         fd,
+        flags,
         true,
     };
 }

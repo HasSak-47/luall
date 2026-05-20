@@ -40,6 +40,38 @@ pub unsafe extern "C" fn args_get_script(args: *const Args) -> *const c_char {
     }
     unsafe {
         if let Some(s) = &(&*args).script {
+            if let Some(s) = s.to_str() {
+                return s.as_ptr() as *const c_char;
+            }
+        }
+    }
+
+    return null();
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn args_get_cache_path(args: *const Args) -> *const c_char {
+    if args.is_null() {
+        return null();
+    }
+
+    unsafe {
+        if let Some(s) = (&*args).cache_path.to_str() {
+            return s.as_ptr() as *const c_char;
+        }
+    }
+
+    return null();
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn args_get_config_path(args: *const Args) -> *const c_char {
+    if args.is_null() {
+        return null();
+    }
+
+    unsafe {
+        if let Some(s) = (&*args).config_path.to_str() {
             return s.as_ptr() as *const c_char;
         }
     }

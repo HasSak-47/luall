@@ -173,10 +173,10 @@ local function build_command(process)
     return name, args
 end
 
----@param name string
----@param args string[]
----@return nil
-local function run_external(name, args)
+---@param process LyraFrontProcess
+---@return LyraCommand, string, string[]
+local function make_command(process)
+    local name, args = build_command(process)
     local target = resolve_command(name)
     local command = lyra.api.process.command(target)
     command:reserve_size(#args + 1)
@@ -185,15 +185,41 @@ local function run_external(name, args)
         command:add_arg(arg)
     end
 
+    return command, name, args
+end
+
+---@param redir LyraFrontToken
+---@param file LyraFrontToken
+---@return LyraFile
+local function open_redirect(redir, file)
+    if redir.val ~= ">" and redir.val ~= ">>" then
+        error("only > and >> redirection is supported")
+    end
+
+    local mode = redir.val == ">>" and "a" or "w"
+    return lyra.api.io.open(expand_front_path(file.val), mode)
+end
+
+---@param command LyraCommand
+---@param output LyraFile|nil
+---@return integer
+local function run_command(command, output)
+    if output ~= nil then
+        command:bind(output, lyra.api.process.WRITE)
+    end
+
     command:run()
+    if output ~= nil then
+        output:close()
+    end
     local status = command:wait()
-    lyra.vars.error = status
+    return status
 end
 
 ---@param process LyraFrontProcess
 ---@return nil
 local function run_cmd(process)
-    local name, args = build_command(process)
+    local command, name, args = make_command(process)
 
     if name == "exit" then
         lyra.core.state.is_running = false
@@ -212,28 +238,40 @@ local function run_cmd(process)
         return
     end
 
-    run_external(name, args)
+    lyra.vars.error = run_command(command, nil)
+end
+
+---@param process LyraFrontProcess
+---@param redir LyraFrontToken
+---@param file LyraFrontToken
+---@return nil
+local function run_redirected(process, redir, file)
+    local command, name = make_command(process)
+    if lyra.api.builtin[name] then
+        error("redirection is only supported for external commands")
+    end
+
+    local output = open_redirect(redir, file)
+    lyra.vars.error = run_command(command, output)
 end
 
 ---@param tokens table[]
+---@param redir LyraFrontToken|nil
+---@param file LyraFrontToken|nil
 ---@return nil
-local function run_piped(tokens)
-    local src_name, src_args = build_command(tokens[1])
-    local out_name, out_args = build_command(tokens[3])
-
-    local src = lyra.api.process.command(resolve_command(src_name))
-    src:reserve_size(#src_args + 1)
-    for _, arg in ipairs(src_args) do
-        src:add_arg(arg)
-    end
-
-    local out = lyra.api.process.command(resolve_command(out_name))
-    out:reserve_size(#out_args + 1)
-    for _, arg in ipairs(out_args) do
-        out:add_arg(arg)
+local function run_piped(tokens, redir, file)
+    local src, src_name = make_command(tokens[1])
+    local out, out_name = make_command(tokens[3])
+    if lyra.api.builtin[src_name] or lyra.api.builtin[out_name] then
+        error("pipes are only supported for external commands")
     end
 
     local pipe = lyra.api.io.pipe()
+    local output = nil
+    if redir ~= nil and file ~= nil then
+        output = open_redirect(redir, file)
+        out:bind(output, lyra.api.process.WRITE)
+    end
     if tokens[2].val == "|&" then
         src:bind(pipe, lyra.api.process.WRITE + lyra.api.process.ERROR)
     else
@@ -244,6 +282,9 @@ local function run_piped(tokens)
     src:run()
     out:run()
     pipe:close()
+    if output ~= nil then
+        output:close()
+    end
 
     local src_status = src:wait()
     local out_status = out:wait()
@@ -253,11 +294,18 @@ end
 ---@param line string
 ---@return nil
 local function handle_shell_like(line)
-    local tokens = tokenize(line)
-    if #tokens[1].val == 1 then
-        run_cmd(tokens[1].val[1])
+    local statement = tokenize(line)[1].val
+    if #statement == 1 then
+        run_cmd(statement[1])
+    elseif #statement == 3 and statement[2].type == "pipe" then
+        run_piped(statement)
+    elseif #statement == 3 and statement[2].type == "redir" then
+        run_redirected(statement[1], statement[2], statement[3])
+    elseif #statement == 5 and statement[2].type == "pipe"
+        and statement[4].type == "redir" then
+        run_piped(statement, statement[4], statement[5])
     else
-        run_piped(tokens[1].val)
+        error("unsupported shell syntax")
     end
 end
 

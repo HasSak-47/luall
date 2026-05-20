@@ -37,9 +37,8 @@ bool path_is_dir(const struct Path* const p) {
 }
 
 bool path_mkdir_p(const struct Path* const p) {
-    if (p->_inner.len == 0) {
+    if (p->_inner.len == 0)
         return true;
-    }
 
     struct Path partial = {};
     size_t start        = 0;
@@ -189,30 +188,47 @@ void path_expand(struct Path* self, const struct Path* const cwd) {
         log_error("tried to expand path using a relative CWD");
         return;
     }
-    if (self->_inner.data[0].ty == CURR_PATH) {
+
+    if (self->_inner.len == 0) {
+        return;
+    }
+
+    if (self->_inner.data[0].ty != ROOT_PATH) {
         struct Path cpy = {};
 
         for (size_t i = 0; i < cwd->_inner.len; ++i) {
             struct PathSegment segment = {};
             segment.ty                 = cwd->_inner.data[i].ty;
             vector_clone(segment.name, cwd->_inner.data[i].name);
-
             path_push_segment(&cpy, segment);
         }
 
-        for (size_t i = 1; i < self->_inner.len; ++i) {
+        for (size_t i = 0; i < self->_inner.len; ++i) {
             struct PathSegment segment = {};
             segment.ty                 = self->_inner.data[i].ty;
             vector_clone(segment.name, self->_inner.data[i].name);
+
+            if (segment.ty == CURR_PATH) {
+                continue;
+            }
+
+            if (segment.ty == PREV_PATH) {
+                if (cpy._inner.len > 1) {
+                    struct PathSegment prev =
+                        cpy._inner.data[cpy._inner.len - 1];
+                    if (prev.ty == NAMED_PATH) {
+                        free(prev.name.data);
+                    }
+                    vector_pop(cpy._inner);
+                }
+                continue;
+            }
 
             path_push_segment(&cpy, segment);
         }
 
         path_destruct(self);
-
         *self = cpy;
-    }
-    else {
     }
 
     return;

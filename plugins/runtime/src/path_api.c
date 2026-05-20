@@ -54,9 +54,6 @@ static int lua_expand_path(lua_State* L) {
     struct Path* path = check_path(L, 1);
     struct Path* cwd  = check_path(L, 2);
     path_expand(path, cwd);
-    char* k = path_get_string(*path);
-    char* c = path_get_string(*cwd);
-    printf("k %s %s\n", k, c);
     return 0;
 }
 

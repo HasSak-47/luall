@@ -21,9 +21,11 @@ struct String pipe_read(struct Pipe* o);
 void pipe_write(struct Pipe* o, struct String data);
 
 enum OpenMode {
-    OPEN_MODE_CREATE = 4,
-    OPEN_MODE_READ   = 1,
-    OPEN_MODE_WRITE  = 2,
+    OPEN_MODE_READ    = 1,
+    OPEN_MODE_WRITE   = 2,
+    OPEN_MODE_CREATE  = 4,
+    OPEN_MODE_APPEND  = 8,
+    OPEN_MODE_TRUNC   = 16,
 };
 
 struct FileHandler {

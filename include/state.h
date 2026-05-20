@@ -1,10 +1,6 @@
 #ifndef __STATE_H__
 #define __STATE_H__
 
-#ifndef PLUGIN_PATH
-#define PLUGIN_PATH "./plugins"
-#endif
-
 #ifndef CACHE_PATH
 #define CACHE_PATH "./.ignore/cache"
 #endif
@@ -40,7 +36,6 @@ struct Vars {
 struct Config {
     struct Path config;
     struct Path cache;
-    struct Path plugins;
 };
 
 struct Hook {
@@ -74,7 +69,7 @@ bool read_input_key(struct InputKey* key);
 void create_input_key_metatable(lua_State* L);
 void push_input_key(lua_State* L, struct InputKey key);
 
-void init_shell_state();
+void init_shell_state(const char* config_path, const char* cache_path);
 void end_shell_state();
 
 void get_current_state();

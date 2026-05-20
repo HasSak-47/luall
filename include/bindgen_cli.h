@@ -16,6 +16,10 @@ struct Args;
 
 void args_delete(struct Args *args);
 
+const char *args_get_cache_path(const struct Args *args);
+
+const char *args_get_config_path(const struct Args *args);
+
 enum Level args_get_level(const struct Args *args);
 
 const char *args_get_script(const struct Args *args);

@@ -33,10 +33,21 @@ static enum OpenMode check_open_flags(lua_State* L, int idx) {
         enum OpenMode flgs = 0;
         if (strchr(s, 'r') != NULL)
             flgs |= OPEN_MODE_READ;
-        if (strchr(s, 'w') == 0)
+        if (strchr(s, 'w') != NULL)
             flgs |= OPEN_MODE_WRITE;
-        if (strchr(s, '+') == 0)
+        if (strchr(s, '+') != NULL) {
+            flgs |= OPEN_MODE_READ;
+            flgs |= OPEN_MODE_WRITE;
+        }
+        if (strchr(s, 'a') != NULL) {
+            flgs |= OPEN_MODE_WRITE;
             flgs |= OPEN_MODE_CREATE;
+            flgs |= OPEN_MODE_APPEND;
+        }
+        if (strchr(s, 'w') != NULL) {
+            flgs |= OPEN_MODE_CREATE;
+            flgs |= OPEN_MODE_TRUNC;
+        }
         return flgs;
     }
 
@@ -86,7 +97,7 @@ static int lua_fd_write(lua_State* L) {
     struct FileHandler* fd = check_file_handler(L, 1);
     const char* data       = lua_tostring(L, 2);
     size_t len             = strlen(data);
-    if (fd->mode & OPEN_MODE_READ)
+    if (fd->mode & OPEN_MODE_WRITE)
         write(fd->fd, data, len);
 
     return 0;
