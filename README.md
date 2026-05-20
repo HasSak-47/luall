@@ -3,6 +3,8 @@
 `lyra` is an interactive Linux shell written in C with an embedded Lua runtime.
 It is built around a small native core and a plugin-driven frontend: terminal I/O, process execution, userdata, and plugin loading live in the core, while prompt rendering, input handling, and parsing live in plugins.
 
+https://github.com/user-attachments/assets/c92d6cd8-56fe-4e29-bc3c-1473fe78469e
+
 ## Highlights
 
 - Minimal shell engine
