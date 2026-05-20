@@ -3,8 +3,10 @@ SRC_DIR := src
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
 SHLIB_EXT := dylib
+SED_INPLACE := sed -i ''
 else
 SHLIB_EXT := so
+SED_INPLACE := sed -i
 endif
 
 RUST_TARGET ?=
@@ -14,11 +16,11 @@ LUA_LIBS := $(shell pkg-config --libs lua5.4 2>/dev/null || pkg-config --libs lu
 
 OBJ_DIR := .ignore/build
 
-SRCS := $(wildcard $(SRC_DIR)/*.c) $(wildcard $(SRC_DIR)/**/*.c)
+SRCS := $(shell find $(SRC_DIR) -name '*.c')
+RUST_SRCS := $(shell find crates -name '*.rs') Cargo.toml Cargo.lock
 
-RUST_SRCS = $(wildcard crates/**/*.rs)
-OUT_RUST_LIB := $(OBJ_DIR)/liblyra.so
-SRC_RUST_LIB := target/debug/liblyra.so
+OUT_RUST_LIB := $(OBJ_DIR)/liblyra.$(SHLIB_EXT)
+SRC_RUST_LIB := target/debug/liblyra.$(SHLIB_EXT)
 
 C_OBJS := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 OBJS := $(C_OBJS) $(OUT_RUST_LIB)
@@ -44,13 +46,13 @@ rustbuild: $(OUT_RUST_LIB)
 $(OUT): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS)
 
-$(OUT_RUST_LIB): $(RUST_SRCS)| $(OBJ_DIRS)
+$(OUT_RUST_LIB): $(RUST_SRCS) | $(OBJ_DIRS)
 	cargo build
 	cp $(SRC_RUST_LIB) $(OUT_RUST_LIB)
 	cbindgen -c ./cbindgen_plugin.toml --crate lyra_plugins --output include/bindgen_plugin.h
 	cbindgen -c ./cbindgen_log.toml --crate lyra_log --output include/bindgen_log.h
 	cbindgen -c ./cbindgen_cli.toml --crate lyra_cli --output include/bindgen_cli.h
-	sed -i 's/^Level args_get_level(/enum Level args_get_level(/' include/bindgen_cli.h
+	$(SED_INPLACE) 's/^Level args_get_level(/enum Level args_get_level(/' include/bindgen_cli.h
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIRS)
 	$(CC) $(CFLAGS) -c $< -o $@

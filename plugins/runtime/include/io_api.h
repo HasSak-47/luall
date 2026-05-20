@@ -14,43 +14,32 @@ struct Pipe {
     int p[2];
 };
 
-enum BindType {
-    NoneBind  = 0,
-    ReadBind  = 1,
-    WriteBind = 2,
-    ErrorBind = 4,
-};
-
 struct Pipe pipe_new();
 void pipe_close(struct Pipe* p);
 
 struct String pipe_read(struct Pipe* o);
 void pipe_write(struct Pipe* o, struct String data);
 
-struct PipeBind {
-    struct Pipe* pipe;
-    enum BindType ty;
+enum OpenMode {
+    OPEN_MODE_CREATE = 4,
+    OPEN_MODE_READ   = 1,
+    OPEN_MODE_WRITE  = 2,
 };
 
-enum IoMode {
-    IO_MODE_CREATE = 4,
-    IO_MODE_READ   = 1,
-    IO_MODE_WRITE  = 2,
-};
-
-struct FDHandler {
+struct FileHandler {
     int fd;
-    enum IoMode mode;
+    enum OpenMode mode;
     bool should_close;
 };
 
 void io_setup_lua_api(lua_State* L);
 
-struct FDHandler stdout_handler();
-struct FDHandler stderr_handler();
-struct FDHandler file_handler(struct Path path, enum IoMode flags);
+struct FileHandler stdout_handler();
+struct FileHandler stderr_handler();
+struct FileHandler file_handler_open(struct Path path, enum OpenMode flags);
+void file_handler_close(struct FileHandler file);
 
-struct Pipe* check_pipe(lua_State* L, int idx);
-enum BindType lua_check_bind_type(lua_State* L, int idx);
+struct Pipe* lua_check_pipe(lua_State* L, int idx);
+struct FileHandler* lua_check_file(lua_State* L, int idx);
 
 #endif

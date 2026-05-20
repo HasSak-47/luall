@@ -75,7 +75,7 @@ pub extern "C" fn init_logger(fd: c_int) {
 
             writeln!(
                 f,
-                "{level_style}{level}{level_style:#} {target_style}{target:>max_target_width$}{target_style:#}:{line} > {}",
+                "{level_style}{level}{level_style:#} {target_style}{target:>max_target_width$}{target_style:#}:{line:4<} > {}",
                 record.args(),
             )
         })

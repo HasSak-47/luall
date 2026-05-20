@@ -4,7 +4,6 @@
 #include <state.h>
 #include <term.h>
 
-#include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,14 +16,7 @@
 
 #include <lauxlib.h>
 #include <lua.h>
-
-/**
- * cmd | cmd
- * cmd > &fd/file
- * cmd >> &fd/file
- *
- * cmd |& cmd === cmd 2>&1 | cmd
- */
+#include "vectors.h"
 
 /**
  * takes an string cmd and clones it
@@ -34,23 +26,12 @@ struct Command command_new(const char* cmd) {
         .cmd        = strdup(cmd),
         .args       = {0, 0, 0},
         .foreground = true,
-
-        .pipe = {NULL, NoneBind},
     };
     log_debug("creating cmd for path: %p %s", cmd, cmd);
     // first arg is the name
     command_add_arg(&c, cmd);
 
     return c;
-}
-
-void command_bind_pipe(
-    struct Command* cmd, struct Pipe* pipe, enum BindType type) {
-    struct PipeBind binding = {pipe, type};
-    log_debug("binding %p(%d %d) pipe for cmd %p with bind %d", pipe,
-        pipe->p[0], pipe->p[1], cmd, (int)type);
-
-    cmd->pipe = binding;
 }
 
 void command_reserve_size(struct Command* cmd, size_t argc) {
@@ -92,38 +73,18 @@ pid_t command_run(struct Command* p) {
             set_to_foreground();
             log_debug("[child]: child is foreground");
         }
-        log_debug("[child]: setting pipes");
-        if (p->pipe.pipe != NULL) {
-            if (p->pipe.ty & ReadBind) {
-                int error = dup2(p->pipe.pipe->p[0], STDIN_FILENO);
-                if (error == -1) {
-                    printf("errno: %d\n", errno);
-                    temporal_suicide_msg("[child]: could not bind in");
-                }
-            }
-            else {
-                close(p->pipe.pipe->p[0]);
-            }
+        log_debug("[child]: setting io binds");
 
-            if (p->pipe.ty & WriteBind) {
-                int error = dup2(p->pipe.pipe->p[1], STDOUT_FILENO);
-                if (error == -1) {
-                    temporal_suicide_msg("[child]: could not bind out");
-                }
-            }
-            else {
-                close(p->pipe.pipe->p[1]);
-            }
+        log_debug("[child]: running bind %d", p->bind.len);
+        for (size_t i = 0; i < p->bind.len; ++i) {
+            log_debug("[child] running bind %d", i);
+            struct ProcessBind* bind = &p->bind.data[i];
+            enum ProcessBindKind k =
+                (p->binded_in ? (bind->kind & PROCESS_READ) : 0) |
+                (p->binded_out ? (bind->kind & PROCESS_WRITE) : 0) |
+                (p->binded_err ? (bind->kind & PROCESS_ERROR) : 0);
 
-            if (p->pipe.ty & ErrorBind) {
-                int error = dup2(p->pipe.pipe->p[1], STDERR_FILENO);
-                if (error == -1) {
-                    temporal_suicide_msg("[child]: could not bind error");
-                }
-            }
-            else {
-                close(p->pipe.pipe->p[1]);
-            }
+            (bind->vt->bind)(bind->handler, k);
         }
 
         log_debug("[child]: executing cmd %s...", p->cmd);
@@ -162,3 +123,106 @@ int process_wait(pid_t pid) {
 
     return status;
 }
+
+void command_bind_io(struct Command* cmd, struct ProcessBind bind) {
+    vector_push(cmd->bind, bind);
+}
+
+static void file_bind(struct FileHandler* handler, enum ProcessBindKind kind) {
+    if (kind & PROCESS_ERROR && handler->mode & OPEN_MODE_WRITE) {
+        dup2(handler->fd, STDERR_FILENO);
+    }
+
+    if (kind & PROCESS_WRITE && handler->mode & OPEN_MODE_WRITE) {
+        dup2(handler->fd, STDOUT_FILENO);
+    }
+
+    if (kind & PROCESS_READ && handler->mode & OPEN_MODE_READ) {
+        dup2(handler->fd, STDIN_FILENO);
+    }
+}
+
+static void pipe_bind(struct Pipe* handler, enum ProcessBindKind kind) {
+    log_debug("running pipe binding");
+    bool out = false;
+    bool in  = false;
+
+    if (kind & PROCESS_ERROR) {
+        dup2(handler->p[1], STDERR_FILENO);
+        out = true;
+    }
+
+    if (kind & PROCESS_WRITE) {
+        dup2(handler->p[1], STDOUT_FILENO);
+        out = true;
+    }
+
+    if (kind & PROCESS_READ) {
+        dup2(handler->p[0], STDIN_FILENO);
+        in = true;
+    }
+
+    if (!out) {
+        close(handler->p[1]);
+    }
+
+    if (!in) {
+        close(handler->p[0]);
+    }
+}
+
+static void lua_bind(struct LuaBind handler, enum ProcessBindKind kind) {
+    lua_rawgeti(state.L, LUA_REGISTRYINDEX, handler.reference);
+    lua_getfield(state.L, -1, "bind");
+
+    if (!lua_isfunction(state.L, -1)) {
+        lua_pop(state.L, 2);
+        return;
+    }
+
+    lua_pushvalue(state.L, -2);
+    lua_pushinteger(state.L, kind);
+    if (lua_pcall(state.L, 2, 0, 0) != LUA_OK) {
+        lua_pop(state.L, 1);
+    }
+}
+
+static void lua_bind_delete(struct LuaBind handler) {
+    luaL_unref(state.L, LUA_REGISTRYINDEX, handler.reference);
+}
+
+static void noop(void* data) {}
+
+const struct BindProcessVTable vtable_file = {
+    (FnBindProcessBind)file_bind, (FnBindProcessDelete)noop};
+
+const struct BindProcessVTable vtable_pipe = {
+    (FnBindProcessBind)pipe_bind, (FnBindProcessDelete)noop};
+const struct BindProcessVTable vtable_lua = {
+    (FnBindProcessBind)lua_bind, (FnBindProcessDelete)lua_bind_delete};
+
+struct ProcessBind bind_from_pipe(struct Pipe* pipe) {
+    return (struct ProcessBind){
+        (void*)pipe,
+        &vtable_pipe,
+        PROCESS_NONE,
+    };
+}
+
+struct ProcessBind bind_from_file(struct FileHandler* file) {
+    return (struct ProcessBind){
+        (void*)file,
+        &vtable_file,
+        PROCESS_NONE,
+    };
+};
+
+struct ProcessBind bind_from_lua(struct LuaBind lua) {
+    void* handler = malloc(sizeof(struct LuaBind));
+    memcpy(handler, &lua, sizeof(struct LuaBind));
+    return (struct ProcessBind){
+        (void*)handler,
+        &vtable_lua,
+        PROCESS_NONE,
+    };
+};

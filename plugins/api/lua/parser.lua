@@ -234,11 +234,12 @@ local function run_piped(tokens)
     end
 
     local pipe = lyra.api.io.pipe()
-    src:bind_pipe(pipe, "write")
     if tokens[2].val == "|&" then
-        src:bind_pipe(pipe, lyra.api.process.WRITE + lyra.api.process.ERROR)
+        src:bind(pipe, lyra.api.process.WRITE + lyra.api.process.ERROR)
+    else
+        src:bind(pipe, lyra.api.process.WRITE)
     end
-    out:bind_pipe(pipe, "read")
+    out:bind(pipe, lyra.api.process.READ)
 
     src:run()
     out:run()

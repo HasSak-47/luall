@@ -4,7 +4,7 @@ lyra.plugin.require("core://api")
 local input_state = {
     history = {
         index = 0,
-        history = {},
+        history = { '!ls | grep lyra' },
         current = "",
     },
     data = '',
