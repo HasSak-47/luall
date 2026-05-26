@@ -39,6 +39,10 @@ The bootstrap config in [config/init.lua](./config/init.lua) currently loads `co
 
 ## Building
 
+These instructions are written for the `stable` branch.
+
+If you are on `main`, you are on the development branch and should expect breakage, incomplete features, or temporary build failures.
+
 ### Dependencies
 
 - Lua 5.4
@@ -55,7 +59,7 @@ Lua 5.4 must be discoverable through `pkg-config` for the build to succeed.
 - Build: `make build`
 - Run: `make run`
 - Clean: `make clean`
-- Test build with `LY_TEST`: `make test`
+- Test build `make test`
 
 `make build` compiles both the C sources and the Rust shared library, then links `./lyra`.
 
