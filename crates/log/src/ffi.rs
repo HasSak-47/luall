@@ -1,7 +1,7 @@
 use std::{
     ffi::{CStr, c_char, c_int, c_uint},
     fmt::Display,
-    os::fd::{AsFd, AsRawFd, FromRawFd},
+    os::fd::FromRawFd,
 };
 
 use log::{Level as LogLevel, LevelFilter as LogLevelFilter, RecordBuilder, logger};
@@ -28,7 +28,7 @@ impl Display for Level {
     }
 }
 
-macro_rules! generate_arms {
+macro_rules! generate_from {
     ($a: ident, $b: ident $(,$x:ident => $y:ident)* ; $(,$w: ident)*) => {
 impl From<$a> for $b{
     fn from(value: $a) -> $b{
@@ -41,11 +41,11 @@ impl From<$a> for $b{
     };
 }
 
-generate_arms!(Level, LogLevelFilter;, Off, Error, Warn, Info, Debug, Trace);
-generate_arms!(Level, LogLevel, Off => Error;, Error, Warn, Info, Debug, Trace);
+generate_from!(Level, LogLevelFilter;, Off, Error, Warn, Info, Debug, Trace);
+generate_from!(Level, LogLevel, Off => Error;, Error, Warn, Info, Debug, Trace);
 
-generate_arms!(LogLevelFilter, Level;, Off, Error, Warn, Info, Debug, Trace);
-generate_arms!(LogLevel, Level;, Error, Warn, Info, Debug, Trace);
+generate_from!(LogLevelFilter, Level;, Off, Error, Warn, Info, Debug, Trace);
+generate_from!(LogLevel, Level;, Error, Warn, Info, Debug, Trace);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn init_logger(fd: c_int) {

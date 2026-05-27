@@ -304,14 +304,13 @@ struct VectorPath path_get_childs(struct Path* path) {
     struct VectorPath p = {};
     char* name          = path_get_string(*path);
     DIR* d              = opendir(name);
+    free(name);
     if (d == NULL) {
         return p;
     }
 
     struct dirent* entry = NULL;
 
-    char* tmp = path_get_string(*path);
-    free(tmp);
     while ((entry = readdir(d)) != NULL) {
         if (strcmp(entry->d_name, "..") == 0) {
             continue;
@@ -325,6 +324,7 @@ struct VectorPath path_get_childs(struct Path* path) {
         vector_push(p, clone)
     }
 
+    closedir(d);
     return p;
 }
 

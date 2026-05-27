@@ -14,10 +14,43 @@
 #include <path.h>
 #include <state.h>
 
+static void free_argv(char** argv) {
+    if (argv == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; argv[i] != NULL; ++i) {
+        free(argv[i]);
+    }
+    free(argv);
+}
+
+static void vector_string_destruct(struct VectorString* strings) {
+    for (size_t i = 0; i < strings->len; ++i) {
+        free(strings->data[i].data);
+    }
+
+    free(strings->data);
+    strings->data = NULL;
+    strings->len  = 0;
+    strings->cap  = 0;
+}
+
+static void vector_path_destruct(struct VectorPath* paths) {
+    for (size_t i = 0; i < paths->len; ++i) {
+        path_destruct(&paths->data[i]);
+    }
+
+    free(paths->data);
+    paths->data = NULL;
+    paths->len  = 0;
+    paths->cap  = 0;
+}
+
 void get_units(struct VectorPath* v, struct Path curr_dir) {
-    log_debug("reading units:...");
+    log_trace("reading units:...");
     if (!path_is_dir(&curr_dir)) {
-        log_debug("found leaf");
+        log_trace("found leaf");
         return;
     }
 
@@ -27,15 +60,23 @@ void get_units(struct VectorPath* v, struct Path curr_dir) {
         struct Path* p     = &childs.data[i];
         struct String name = path_get_name(p);
         // TODO: generate a get_file_ext function
-        if (name.data[name.len - 2] == '.' && name.data[name.len - 1] == 'c') {
+        if (name.len >= 2 && name.data[name.len - 2] == '.' &&
+            name.data[name.len - 1] == 'c') {
             vector_push(*v, *p);
+            *p = (struct Path){0};
+            free(name.data);
             continue;
         }
 
         if (path_is_dir(p)) {
             get_units(v, *p);
         }
+
+        free(name.data);
+        path_destruct(p);
     }
+
+    vector_path_destruct(&childs);
 }
 
 // TODO: make into a macro
@@ -68,6 +109,7 @@ static void complile_c_plugin_no_makefile(
     char* include_path_str = path_get_string(include_path);
     vector_push(args, string_from_cstr("-I"));
     vector_push(args, string_from_cstr(include_path_str));
+    free(include_path_str);
 
     log_debug("pushing units");
     for (size_t i = 0; i < compilation_units.len; ++i) {
@@ -109,10 +151,10 @@ static void complile_c_plugin_no_makefile(
     }
 
     path_destruct(&path);
-
-    char* bin_path = malloc(strlen(argv[args.len - 1]));
-    strcpy(bin_path, argv[args.len - 1]);
-    free(argv);
+    path_destruct(&include_path);
+    vector_path_destruct(&compilation_units);
+    free_argv(argv);
+    vector_string_destruct(&args);
 }
 
 // WARN: MEMORY LEAK YET I DO NOT CARE
@@ -124,7 +166,9 @@ static void complile_c_plugin_makefile(struct Path path, const char* object_str,
     log_debug("pushing make");
     vector_push(args, string_from_cstr("/bin/make"));
     vector_push(args, string_from_cstr("-C"));
-    vector_push(args, string_from_cstr(path_get_string(path)));
+    char* path_str = path_get_string(path);
+    vector_push(args, string_from_cstr(path_str));
+    free(path_str);
 
     vector_push(args, string_from_cstr("CFLAGS+= '-I../../include'"));
 
@@ -169,10 +213,8 @@ static void complile_c_plugin_makefile(struct Path path, const char* object_str,
     }
 
     path_destruct(&path);
-
-    char* bin_path = malloc(strlen(argv[args.len - 1]));
-    strcpy(bin_path, argv[args.len - 1]);
-    free(argv);
+    free_argv(argv);
+    vector_string_destruct(&args);
 }
 
 static void complile_c_plugin(const struct PluginData* data) {
@@ -198,17 +240,13 @@ static void complile_c_plugin(const struct PluginData* data) {
             name.data[j] = tolower(name.data[j]);
         }
 
-        name.len = 8;
         if (string_cmp_cstring(name, "makefile")) {
             has_make = true;
         }
 
         free(name.data);
     }
-    for (size_t i = 0; i < childs.len; ++i) {
-        path_destruct(&childs.data[i]);
-    }
-    free(childs.data);
+    vector_path_destruct(&childs);
 
     if (has_make) {
         complile_c_plugin_makefile(path, object_str, artifact_str, name_str);
@@ -218,7 +256,10 @@ static void complile_c_plugin(const struct PluginData* data) {
     }
 
     free(object_str);
+    free(path_str);
+    free(artifact_str);
     free(name_str);
+    path_destruct(&artifact_path);
 }
 
 static struct PluginHandler _prepare_binary_plugin(const char* path) {
@@ -231,23 +272,127 @@ static struct PluginHandler _prepare_binary_plugin(const char* path) {
 }
 
 struct PluginHandler prepare_binary_plugin(const struct PluginData* p) {
-    struct PluginHandler c =
-        _prepare_binary_plugin(plugin_get_shared_object_path(p));
-    c.kind = PLUGIN_KIND_BINARY;
+    char* object_str       = plugin_get_shared_object_path(p);
+    struct PluginHandler c = _prepare_binary_plugin(object_str);
+    c.kind                 = PLUGIN_KIND_BINARY;
+    free(object_str);
     return c;
 }
 
 struct PluginHandler prepare_c_plugin(const struct PluginData* p) {
     complile_c_plugin(p);
-    struct PluginHandler c =
-        _prepare_binary_plugin(plugin_get_shared_object_path(p));
-    c.kind = PLUGIN_KIND_C;
+    char* object_str       = plugin_get_shared_object_path(p);
+    struct PluginHandler c = _prepare_binary_plugin(object_str);
+    c.kind                 = PLUGIN_KIND_C;
+    free(object_str);
 
     return c;
 }
 
 struct PluginHandler prepare_rust_plugin(const struct PluginData* p) {
-    return (struct PluginHandler){};
+    char* path_str     = plugin_get_data_path(p);
+    char* object_str   = plugin_get_shared_object_path(p);
+    char* artifact_str = plugin_get_compilation_path(p);
+    char* name_str     = plugin_get_name(p);
+
+    struct Path artifact_path = path_parse(artifact_str);
+    path_mkdir_p(&artifact_path);
+
+    struct Path manifest_path = path_parse(path_str);
+    path_push_name(&manifest_path, "Cargo.toml");
+    char* manifest_str = path_get_string(manifest_path);
+
+    struct Path target_path = path_parse(artifact_str);
+    path_push_name(&target_path, "cargo");
+    char* target_str = path_get_string(target_path);
+
+    char* cargo_argv[] = {
+        "cargo",
+        "build",
+        "--manifest-path",
+        manifest_str,
+        "--target-dir",
+        target_str,
+        NULL,
+    };
+
+    log_debug("building rust plugin %s @ %s", name_str, path_str);
+    bool compiled = false;
+
+    pid_t pid = fork();
+    if (pid == 0) {
+        execvp(cargo_argv[0], cargo_argv);
+        printf("execvp failed to run %s\n", cargo_argv[0]);
+        exit(-1);
+    }
+    else if (pid > 0) {
+        log_debug("pid %lu", pid);
+        int status = 0;
+        waitpid(pid, &status, 0);
+        compiled = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+    }
+
+    log_debug("rust plugin compilation_status %s", compiled ? "ok" : "err");
+
+    struct PluginHandler handler = {};
+    if (compiled) {
+        struct Path built_object_path = path_parse(target_str);
+        path_push_name(&built_object_path, "debug");
+
+        struct String lib_name = string_from_cstr("lib");
+        string_concat_cstr(&lib_name, name_str);
+        string_concat_cstr(&lib_name, ".so");
+        path_push_name_string(&built_object_path, lib_name);
+
+        char* built_object_str = path_get_string(built_object_path);
+        bool copied            = false;
+
+        char* copy_argv[] = {
+            "/bin/cp",
+            built_object_str,
+            object_str,
+            NULL,
+        };
+
+        pid = fork();
+        if (pid == 0) {
+            execv("/bin/cp", copy_argv);
+            printf("execv failed to run /bin/cp\n");
+            exit(-1);
+        }
+        else if (pid > 0) {
+            log_debug("pid %lu", pid);
+            int status = 0;
+            waitpid(pid, &status, 0);
+            copied = WIFEXITED(status) && WEXITSTATUS(status) == 0;
+        }
+
+        if (copied) {
+            handler      = _prepare_binary_plugin(object_str);
+            handler.kind = PLUGIN_KIND_RUST;
+        }
+        else {
+            printf("rust plugin artifact copy failed, refusing to run\n");
+        }
+
+        free(built_object_str);
+        path_destruct(&built_object_path);
+    }
+    else {
+        printf("rust plugin compilation failed, refusing to run\n");
+    }
+
+    free(path_str);
+    free(object_str);
+    free(artifact_str);
+    free(name_str);
+    free(manifest_str);
+    free(target_str);
+    path_destruct(&artifact_path);
+    path_destruct(&manifest_path);
+    path_destruct(&target_path);
+
+    return handler;
 }
 
 struct PluginHandler prepare_lua_plugin(const struct PluginData* p) {
@@ -263,8 +408,11 @@ void unload_c_plugin(lua_State* state, struct PluginHandler* p) {
     dlclose(p->handler);
 }
 
-void unload_rust_plugin(lua_State* state, struct PluginHandler* p) {}
+void unload_rust_plugin(lua_State* state, struct PluginHandler* p) {
+    dlclose(p->handler);
+}
 
 void unload_lua_plugin(lua_State* state, struct PluginHandler* p) {
     // TODO: call destructor or something...
+    free(p->lua_path);
 }

@@ -164,9 +164,10 @@ end
 ---@param process LyraFrontProcess
 ---@return string, string[]
 local function build_command(process)
-    local name = table.remove(process.val, 1).val
+    local name = process.val[1].val
     local args = {}
-    for _, token in ipairs(process.val) do
+    for i = 2, #process.val do
+        local token = process.val[i]
         table.insert(args, token.val)
     end
 
@@ -291,10 +292,10 @@ local function run_piped(tokens, redir, file)
     lyra.vars.error = out_status ~= 0 and out_status or src_status
 end
 
----@param line string
+---@param statement LyraFrontStatement
 ---@return nil
-local function handle_shell_like(line)
-    local statement = tokenize(line)[1].val
+local function run_statement(statement)
+    statement = statement.val
     if #statement == 1 then
         run_cmd(statement[1])
     elseif #statement == 3 and statement[2].type == "pipe" then
@@ -310,47 +311,77 @@ local function handle_shell_like(line)
 end
 
 ---@param line string
----@return nil
-local function handle_singleline(line)
+---@return LyraFrontStatement
+local function parse_line(line)
     local start = line:find("lua", 1, true)
     if start == 1 then
-        lyra.api.builtin.lua({ line:gsub("^lua%s*", "", 1) })
-    else
-        handle_shell_like(line)
+        return {
+            type = "lua",
+            val = line:gsub("^lua%s*", "", 1),
+        }
     end
+
+    return tokenize(line)[1]
 end
 
 ---@param input string|nil
----@return nil
+---@return LyraFrontChunk
 local function parse(input)
     if input == nil or input == "" then
-        lyra.vars.error = 0
-        return
+        return { type = "chunk", debug = false, val = {} }
     end
 
     local set_debug = input:sub(1, 1) == "!"
     if set_debug then
         input = input:sub(2)
-        lyra.vars.debug = true
     end
 
     local lines = {}
     for line in input:gmatch("[^\n]+") do
         if line ~= "" then
-            table.insert(lines, line)
+            table.insert(lines, parse_line(line))
         end
     end
 
-    if #lines == 1 then
-        handle_singleline(lines[1])
+    return { type = "chunk", debug = set_debug, val = lines }
+end
+
+---@param tree LyraFrontChunk|LyraFrontStatement
+---@return nil
+local function run(tree)
+    if tree == nil then
+        lyra.vars.error = 0
+        return
     end
 
-    if set_debug then
+    if tree.type ~= "chunk" then
+        tree = { type = "chunk", debug = false, val = { tree } }
+    end
+
+    if #tree.val == 0 then
+        lyra.vars.error = 0
+        return
+    end
+
+    if tree.debug then
+        lyra.vars.debug = true
+    end
+
+    for _, statement in ipairs(tree.val) do
+        if statement.type == "lua" then
+            lyra.api.builtin.lua({ statement.val })
+        else
+            run_statement(statement)
+        end
+    end
+
+    if tree.debug then
         lyra.vars.debug = false
     end
 end
 
 return {
     parse = parse,
+    run = run,
     tokenize = tokenize,
 }

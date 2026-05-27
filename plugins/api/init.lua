@@ -1,4 +1,4 @@
-local parser = require("api.parser")
+local lang = require("api.lang")
 
 ---@return string
 local function home_string()
@@ -98,13 +98,12 @@ end
 ---@return nil
 local function setup_extension_namespace()
     lyra.api = setmetatable({
-        parser = parser,
+        lang = lang,
         render_input = render_input,
         expand_path = expand_path,
         format_path = format_path,
         full_color = full_color,
         reset_color = reset_color,
-        tokenize = parser.tokenize,
         prompt = prompt,
         builtin = {
             cd = function(args)

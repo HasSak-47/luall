@@ -382,9 +382,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "009994f150cc0cd50ff54917d5bc8bffe8cad10ca10d81c34da2ec421ae61782"
 
 [[package]]
-name = "tree-sitter-lyra-script"
-version = "0.1.0"
-source = "git+https://github.com/HasSak-47/tree-sitter-lyra_script.git?branch=main#bdbe0b56b8a04f6ea8d5f2a2fa026494c2012c30"
+name = "tree-sitter-lyra"
+version = "0.5.0"
+source = "git+https://github.com/HasSak-47/tree-sitter-lyra.git?branch=main#0ec55f5361293774ae9326200592cdb48bab6db6"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -398,7 +398,7 @@ dependencies = [
  "mlua",
  "tree-sitter",
  "tree-sitter-highlight",
- "tree-sitter-lyra-script",
+ "tree-sitter-lyra",
 ]
 
 [[package]]

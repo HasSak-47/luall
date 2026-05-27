@@ -126,8 +126,14 @@
 ---@field val table[]
 ---@field type string
 
----@class LyraParser
----@field parse fun(input: string|nil)
+---@class LyraFrontChunk
+---@field val LyraFrontStatement[]
+---@field type "chunk"
+---@field debug boolean
+
+---@class LyraLang
+---@field parse fun(input: string|nil): LyraFrontChunk
+---@field run fun(tree: LyraFrontChunk|LyraFrontStatement)
 ---@field tokenize fun(input: string): LyraFrontStatement[]
 
 ---@class LyraBuiltinApi
@@ -135,13 +141,12 @@
 ---@field lua fun(args: string[])
 
 ---@class LyraApi: LyraCoreApi
----@field parser LyraParser
+---@field lang LyraLang
 ---@field render_input fun(data: string, index: integer)
 ---@field expand_path fun(path: string|nil): LyraPath
 ---@field format_path fun(path: LyraPath): string
 ---@field full_color fun(r: integer, g: integer, b: integer): string
 ---@field reset_color fun(): string
----@field tokenize fun(input: string): LyraFrontStatement[]
 ---@field prompt fun(): string
 ---@field builtin LyraBuiltinApi
 

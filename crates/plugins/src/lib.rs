@@ -128,7 +128,7 @@ pub struct PluginData {
     // path plugins are at the specified path
     // git plugins are stored into: $STATE_PATH/lyra/plugins/{name}
 
-    // binary cache is at $STATE_PATH/lyra/cache/{name}.so
+    // binary cache is at $STATE_PATH/lyra/plugin_artifacts/{name}
     pub root_path: PathBuf,
     pub artifact_path: PathBuf,
     pub handler: PluginHandlerWrapper,
@@ -169,6 +169,7 @@ impl PluginData {
         let manifest = Manifest::generate_manifest(buf.as_str())?;
 
         let mut artifact_path = STATE_PATH.clone();
+        artifact_path.push("plugin_artifacts");
         artifact_path.push(&manifest.header.name);
 
         return Ok(PluginData {

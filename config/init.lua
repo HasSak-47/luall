@@ -17,9 +17,12 @@ local function submit_input()
     io.stdout:write("\r" .. lyra.api.prompt() .. line .. "\n")
 
     if line ~= "" then
-        local ok, err = pcall(lyra.api.parser.parse, line)
+        local ok, err = pcall(function()
+            local tree = lyra.api.lang.parse(line)
+            lyra.api.lang.run(tree)
+        end)
         if not ok then
-            print('failed to parse', err)
+            print('failed to run', err)
             return
         end
     else
