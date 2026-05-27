@@ -13,12 +13,13 @@ local input_state = {
 
 local function submit_input()
     local line = input_state.data
+    local tokens = lyra.api.lang.tokenize(line)
 
-    io.stdout:write("\r" .. lyra.api.prompt() .. line .. "\n")
+    io.stdout:write("\r" .. lyra.api.prompt() .. lyra.api.format_tokens(line, tokens) .. "\n")
 
     if line ~= "" then
         local ok, err = pcall(function()
-            local tree = lyra.api.lang.parse(line)
+            local tree = lyra.api.lang.parse(tokens)
             lyra.api.lang.run(tree)
         end)
         if not ok then

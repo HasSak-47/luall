@@ -22,10 +22,25 @@ end
 ---@field span integer[]
 ---@field val string
 ---@field type string
+---@field error string|nil
 
 ---@class LyraFrontProcess
 ---@field val LyraFrontToken[]
 ---@field type string
+
+---@class LyraFrontStatement
+---@field val table[]
+---@field type string
+
+---@class LyraFrontChunk
+---@field val LyraFrontStatement[]
+---@field type "chunk"
+---@field debug boolean
+
+---@class LyraLang
+---@field parse fun(tokens: LyraFrontToken[]|nil): LyraFrontChunk
+---@field run fun(tree: LyraFrontChunk|LyraFrontStatement)
+---@field tokenize fun(input: string): LyraFrontToken[]
 
 ---@param tokens LyraFrontToken[]
 ---@return LyraFrontProcess
@@ -47,11 +62,13 @@ local function take_process(tokens)
     local process = {}
     for _ = 1, limit do
         local token = table.remove(tokens, 1)
-        token.type = "argument"
+        if token.type ~= "error" then
+            token.type = "argument"
+        end
         table.insert(process, token)
     end
 
-    if process[1] ~= nil then
+    if process[1] ~= nil and process[1].type ~= "error" then
         process[1].type = "command"
     end
 
@@ -59,15 +76,40 @@ local function take_process(tokens)
 end
 
 ---@param input string
----@return table[]
+---@return LyraFrontToken[]
 local function tokenize(input)
     local index = 1
     local len = #input
     local tokens = {}
 
+    if input:sub(1, 1) == "!" then
+        table.insert(tokens, {
+            span = { 1, 1 },
+            val = "!",
+            type = "debug",
+        })
+        index = 2
+    end
+
+    local lua_start, lua_end = input:find("lua%s+", index)
+    if lua_start == index then
+        table.insert(tokens, {
+            span = { lua_start, lua_start + 2 },
+            val = "lua",
+            type = "str",
+        })
+        table.insert(tokens, {
+            span = { lua_end + 1, len },
+            val = input:sub(lua_end + 1),
+            type = "lua_code",
+        })
+        return tokens
+    end
+
     while index <= len do
         local char = input:sub(index, index)
 
+        -- get string literals
         if char == '"' or char == "'" then
             local quote = char
             local start = index
@@ -75,14 +117,21 @@ local function tokenize(input)
             while index <= len and input:sub(index, index) ~= quote do
                 index = index + 1
             end
-            if index <= len then
+            if index > len then
+                table.insert(tokens, {
+                    span = { start, len },
+                    val = input:sub(start),
+                    type = "error",
+                    error = "unterminated string",
+                })
+            else
                 index = index + 1
+                table.insert(tokens, {
+                    span = { start, index - 1 },
+                    val = input:sub(start + 1, index - 2),
+                    type = "string",
+                })
             end
-            table.insert(tokens, {
-                span = { start, index - 1 },
-                val = input:sub(start + 1, index - 2),
-                type = "str",
-            })
         elseif not char:match("%s") then
             local start = index
             while index <= len and not input:sub(index, index):match("%s") do
@@ -99,15 +148,50 @@ local function tokenize(input)
     end
 
     for _, token in ipairs(tokens) do
-        if pipe_set[token.val] then
+        if token.type == "error" or token.type == "debug" or token.type == "string" then
+            -- keep special lexer tokens intact for callers and parse validation
+        elseif pipe_set[token.val] then
             token.type = "pipe"
         elseif redir_set[token.val] then
             token.type = "redir"
         elseif fd_set[token.val] then
             token.type = "fd"
         else
-            token.type = "str"
+            token.type = "identifier"
         end
+    end
+
+    return tokens
+end
+
+---@param tokens LyraFrontToken[]
+---@return LyraFrontToken[]
+local function clone_tokens(tokens)
+    local result = {}
+    for _, token in ipairs(tokens) do
+        table.insert(result, {
+            span = { token.span[1], token.span[2] },
+            val = token.val,
+            type = token.type,
+            error = token.error,
+        })
+    end
+    return result
+end
+
+---@param tokens LyraFrontToken[]
+---@return LyraFrontStatement
+local function parse_statement(tokens)
+    if tokens[1] ~= nil and tokens[1].type == "str" and tokens[1].val == "lua" then
+        local code = ""
+        if tokens[2] ~= nil then
+            code = tokens[2].val
+        end
+
+        return {
+            type = "lua",
+            val = code,
+        }
     end
 
     local statement = { val = { take_process(tokens) }, type = "statement" }
@@ -124,7 +208,89 @@ local function tokenize(input)
         end
     end
 
-    return { statement }
+    return statement
+end
+
+---@param process LyraFrontProcess|nil
+---@param context string
+---@return nil
+local function validate_process(process, context)
+    if process == nil or process.type ~= "process" or #process.val == 0 then
+        error("syntax error: expected command " .. context)
+    end
+
+    if process.val[1].type ~= "command" or process.val[1].val == "" then
+        error("syntax error: expected command " .. context)
+    end
+end
+
+---@param node table
+---@return nil
+local function validate_no_error_tokens(node)
+    if node.type == "error" or node.error ~= nil then
+        error("syntax error: " .. node.error)
+    end
+
+    if node.val == nil or type(node.val) ~= "table" then
+        return
+    end
+
+    for _, child in ipairs(node.val) do
+        if type(child) == "table" then
+            validate_no_error_tokens(child)
+        end
+    end
+end
+
+---@param statement LyraFrontStatement
+---@return nil
+local function validate_statement(statement)
+    validate_no_error_tokens(statement)
+
+    if statement.type == "lua" then
+        return
+    end
+
+    if statement == nil or statement.type ~= "statement" then
+        error("syntax error: expected statement")
+    end
+
+    local nodes = statement.val
+    validate_process(nodes[1], "at start of statement")
+
+    if #nodes == 1 then
+        return
+    end
+
+    if #nodes == 3 and nodes[2].type == "pipe" then
+        validate_process(nodes[3], "after pipe")
+        return
+    end
+
+    if #nodes == 3 and nodes[2].type == "redir" then
+        if nodes[3] == nil or not (nodes[3].type == "string" or nodes[3].type == "identifier") or nodes[3].val == "" then
+            error("syntax error: expected file after redirection")
+        end
+
+        if nodes[2].val ~= ">" and nodes[2].val ~= ">>" then
+            error("syntax error: unsupported redirection '" .. nodes[2].val .. "'")
+        end
+        return
+    end
+
+    if #nodes == 5 and nodes[2].type == "pipe" and nodes[4].type == "redir" then
+        validate_process(nodes[3], "after pipe")
+        if nodes[5] == nil or nodes[5].type ~= "identifier" or nodes[5].val == "" then
+            error("syntax error: expected file after redirection")
+        end
+
+        if nodes[4].val ~= ">" and nodes[4].val ~= ">>" then
+            error("syntax error: unsupported redirection '" .. nodes[4].val .. "'")
+        end
+        return
+    end
+
+    error("syntax error: unsupported shell syntax")
 end
 
 ---@param value string|nil
@@ -310,37 +476,26 @@ local function run_statement(statement)
     end
 end
 
----@param line string
----@return LyraFrontStatement
-local function parse_line(line)
-    local start = line:find("lua", 1, true)
-    if start == 1 then
-        return {
-            type = "lua",
-            val = line:gsub("^lua%s*", "", 1),
-        }
-    end
-
-    return tokenize(line)[1]
-end
-
----@param input string|nil
+---@param tokens LyraFrontToken[]|nil
 ---@return LyraFrontChunk
-local function parse(input)
-    if input == nil or input == "" then
+local function parse(tokens)
+    if tokens == nil or #tokens == 0 then
         return { type = "chunk", debug = false, val = {} }
     end
 
-    local set_debug = input:sub(1, 1) == "!"
+    tokens = clone_tokens(tokens)
+
+    local set_debug = tokens[1] ~= nil and tokens[1].type == "debug"
     if set_debug then
-        input = input:sub(2)
+        lyra.core.state.vars.debug = true
+        table.remove(tokens, 1)
     end
 
     local lines = {}
-    for line in input:gmatch("[^\n]+") do
-        if line ~= "" then
-            table.insert(lines, parse_line(line))
-        end
+    if #tokens > 0 then
+        local statement = parse_statement(tokens)
+        validate_statement(statement)
+        table.insert(lines, statement)
     end
 
     return { type = "chunk", debug = set_debug, val = lines }
@@ -380,7 +535,17 @@ local function run(tree)
     end
 end
 
+---@param tokens LyraFrontToken[]
+local function print_tokens(tokens)
+    for _, token in ipairs(tokens) do
+        print(token.type, token.val)
+    end
+end
+
 return {
+    debug = {
+        print_tokens = print_tokens,
+    },
     parse = parse,
     run = run,
     tokenize = tokenize,

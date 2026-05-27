@@ -34,6 +34,7 @@ local function format_path(path)
     return path_string
 end
 
+
 ---@param r integer
 ---@param g integer
 ---@param b integer
@@ -46,6 +47,25 @@ end
 local function reset_color()
     return "\27[0m"
 end
+
+local color_names = {
+    black   = "\27[30m",
+    red     = "\27[31m",
+    green   = "\27[32m",
+    yellow  = "\27[33m",
+    blue    = "\27[34m",
+    magenta = "\27[35m",
+    cyan    = "\27[36m",
+    white   = "\27[37m",
+    reset   = "\27[0m",
+
+    tokens  = {
+        ["string"] = full_color(0xbf, 0x9c, 0x30),
+        ["identifier"] = full_color(0xff, 0x94, 0x00),
+        ["pipe"] = full_color(0x00, 0xa6, 0xb2),
+        ["redir"] = full_color(0xbf, 0x5b, 0x30),
+    },
+}
 
 ---@return string
 local function prompt()
@@ -80,10 +100,38 @@ local function prompt()
     return value
 end
 
+---@param src string
+---@param tokens LyraFrontToken[]
+local function format_tokens(src, tokens)
+    local tcols = color_names.tokens
+    local reset = color_names.reset
+    local offset = 0
+
+    for _, token in pairs(tokens) do
+        local col = tcols[token.type]
+        if col ~= nil then
+            local prefix = src:sub(1, token.span[1] + offset - 1)
+            local postfix = src:sub(1 + token.span[2] + offset, #src)
+
+            src = prefix .. col .. src:sub(token.span[1] + offset, token.span[2] + offset) .. reset .. postfix
+
+            offset = offset + #col + #reset
+        end
+    end
+
+    return src
+end
+
+
 ---@return nil
 local function render_input(data, index)
-    local line = "\r" .. lyra.api.prompt() .. data
-    io.stdout:write(line)
+    -- local line = "\r" .. lyra.api.prompt() .. data
+    -- local line = input_state.data
+    local tokens = lyra.api.lang.tokenize(data)
+
+    io.stdout:write("\r" .. lyra.api.prompt() .. format_tokens(data, tokens))
+
+    -- io.stdout:write(line)
     io.stdout:write("\27[K")
 
     local step_back = data:len() - index
@@ -100,10 +148,13 @@ local function setup_extension_namespace()
     lyra.api = setmetatable({
         lang = lang,
         render_input = render_input,
+        format_tokens = format_tokens,
         expand_path = expand_path,
         format_path = format_path,
-        full_color = full_color,
-        reset_color = reset_color,
+        color = {
+            full_color = full_color,
+            reset_color = reset_color,
+        },
         prompt = prompt,
         builtin = {
             cd = function(args)
@@ -135,7 +186,9 @@ local function setup_extension_namespace()
             end,
         }
     }, { __index = lyra.core.api })
-    lyra.vars = setmetatable({}, {
+    lyra.vars = setmetatable({
+        color_names = color_names
+    }, {
         __index = function(_, name)
             return lyra.core.state.vars[name]
         end,

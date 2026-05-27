@@ -116,7 +116,7 @@ When required as a C plugin, `core://runtime` currently returns its setup/config
 `core://api` is the higher-level shell plugin. It depends on `core://runtime`, then installs the frontend shell layer:
 
 - `lyra.api`: the shell-facing API table
-- `lyra.api.lang`: parse and run frontend shell input
+- `lyra.api.lang`: tokenize, parse, and run frontend shell input
 - `lyra.api.prompt(...)` and `lyra.api.render_input(...)`: prompt and input rendering helpers
 - `lyra.api.expand_path(...)` and `lyra.api.format_path(...)`: path helpers built on top of `lyra.core`
 - `lyra.vars`: a Lua-facing view over `lyra.core.state.vars`
