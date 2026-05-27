@@ -7,3 +7,8 @@ kind = "Lua"
 [[dependecies]]
 name = "runtime"
 source = "core://runtime"
+
+[[dependecies]]
+name = "runtime"
+source = "core://treesitter"
+optional = true

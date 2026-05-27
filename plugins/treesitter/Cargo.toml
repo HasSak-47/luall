@@ -11,6 +11,7 @@ anyhow = "1.0.102"
 mlua = { version = "0.11.6", features = ["lua54", "anyhow"] }
 tree-sitter = "0.26.8"
 tree-sitter-highlight = "0.26.8"
+tree-sitter-lua = "0.5.0"
 tree-sitter-lyra = {
     branch="main",
     git="https://github.com/HasSak-47/tree-sitter-lyra.git",

@@ -53,12 +53,12 @@ pub struct ManifestHeader {
     pub src: Option<String>,
 }
 
-fn default_true() -> bool {
-    true
+fn default_false() -> bool {
+    false
 }
 
-fn is_true(v: &bool) -> bool {
-    *v
+fn is_false(v: &bool) -> bool {
+    *v == false
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
@@ -66,7 +66,7 @@ pub struct Dependency {
     pub name: String,
     pub version: Option<Version>,
 
-    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    #[serde(default = "default_false", skip_serializing_if = "is_false")]
     pub optional: bool,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]

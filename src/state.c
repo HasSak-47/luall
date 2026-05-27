@@ -562,6 +562,14 @@ void get_current_state() {}
  * cleanins the shell state
  */
 void end_shell_state() {
+    const CIteratorString* iter = get_plugin_iterator(state.manager);
+    const char* next            = NULL;
+
+    log_debug("unloading plugins");
+    while ((next = next_plugin_name(iter)) != NULL) {
+        manager_unload_plugin(state.L, state.manager, next);
+    }
+
     log_debug("closing lua %p", state.L);
     lua_close(state.L);
 
@@ -572,14 +580,6 @@ void end_shell_state() {
     path_destruct(&state.vars.cwd);
     path_destruct(&state.vars.user.home);
     path_destruct(&state.config.config);
-
-    const CIteratorString* iter = get_plugin_iterator(state.manager);
-    const char* next            = NULL;
-
-    log_debug("unloading plugins");
-    while ((next = next_plugin_name(iter)) != NULL) {
-        manager_unload_plugin(state.L, state.manager, next);
-    }
 
     log_debug("deleting pluging manager");
     delete_plugin_manager(state.manager);

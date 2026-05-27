@@ -13,6 +13,7 @@
 #include <ly_string.h>
 #include <path.h>
 #include <state.h>
+#include <lauxlib.h>
 
 static void free_argv(char** argv) {
     if (argv == NULL) {
@@ -413,6 +414,32 @@ void unload_rust_plugin(lua_State* state, struct PluginHandler* p) {
 }
 
 void unload_lua_plugin(lua_State* state, struct PluginHandler* p) {
-    // TODO: call destructor or something...
+    if (p->destruct_reference != 0) {
+        lua_rawgeti(state, LUA_REGISTRYINDEX, p->destruct_reference);
+        if (lua_pcall(state, 0, 0, 0) != LUA_OK) {
+            const char* err = lua_tostring(state, -1);
+            log_error("lua plugin unload failed: %s", err);
+            lua_pop(state, 1);
+        }
+        luaL_unref(state, LUA_REGISTRYINDEX, p->destruct_reference);
+        p->destruct_reference = 0;
+    }
+
+    if (p->setup_reference != 0) {
+        luaL_unref(state, LUA_REGISTRYINDEX, p->setup_reference);
+        p->setup_reference = 0;
+    }
+
+    if (p->export_reference != 0) {
+        luaL_unref(state, LUA_REGISTRYINDEX, p->export_reference);
+        p->export_reference = 0;
+    }
+
+    if (p->provides_reference != 0) {
+        luaL_unref(state, LUA_REGISTRYINDEX, p->provides_reference);
+        p->provides_reference = 0;
+    }
+
     free(p->lua_path);
+    p->lua_path = NULL;
 }
