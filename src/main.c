@@ -83,6 +83,10 @@ int main(const int argc, const char* argv[]) {
     }
     log_debug("running exit hooks");
     trigger_exit_hook();
+
+    leave_alternate_screen();
+    unset_raw_mode();
+
     end_shell_state();
     free(config_path_copy);
     free(cache_path_copy);

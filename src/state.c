@@ -4,6 +4,7 @@
 #include <logs.h>
 #include <ly_string.h>
 #include <path.h>
+#include <plugin.h>
 #include <plugin/definitions.h>
 #include <state.h>
 
@@ -40,10 +41,11 @@ void init_shell_variables() {
 }
 
 void init_shell_config(const char* config_path, const char* cache_path) {
-    state.manager       = new_plugin_manager();
-    state.config.config = path_parse(
-        config_path != NULL ? config_path : CONFIG_PATH);
-    state.config.cache = path_parse(cache_path != NULL ? cache_path : CACHE_PATH);
+    state.manager = new_plugin_manager();
+    state.config.config =
+        path_parse(config_path != NULL ? config_path : CONFIG_PATH);
+    state.config.cache =
+        path_parse(cache_path != NULL ? cache_path : CACHE_PATH);
 
     path_expand(&state.config.config, &state.vars.cwd);
     path_expand(&state.config.cache, &state.vars.cwd);
@@ -51,70 +53,6 @@ void init_shell_config(const char* config_path, const char* cache_path) {
 
 int empty_plugin_setup(lua_State* L) {
     return 0;
-}
-
-static void run_event_enter_hook(struct Hook* hook) {
-    log_debug("running enter event");
-    if (hook->kind == PLUGIN_KIND_C) {
-        hook->actor(state.L);
-    }
-    else {
-        lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
-        lua_pcall(state.L, 0, 0, 0);
-    }
-}
-
-static void run_event_exit_hook(struct Hook* hook) {
-    log_debug("running exit event");
-    if (hook->kind == PLUGIN_KIND_C) {
-        hook->actor(state.L);
-    }
-    else {
-        lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
-        lua_pcall(state.L, 0, 0, 0);
-    }
-}
-
-static void run_event_key_input_hook(struct InputKey key, struct Hook* hook) {
-    log_trace("running input event");
-    if (hook->kind == PLUGIN_KIND_C) {
-        push_input_key(state.L, key);
-        hook->actor(state.L);
-    }
-    else {
-        lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
-        push_input_key(state.L, key);
-        lua_pcall(state.L, 1, 0, 0);
-    }
-}
-
-void trigger_enter_hook() {
-    log_debug("running enter hooks");
-    for (size_t i = 0; i < state.hooks.len; ++i) {
-        log_debug("running hook #%lu", i);
-        if (state.hooks.data[i].event == EVENT_ENTER) {
-            run_event_enter_hook(&state.hooks.data[i]);
-        }
-    }
-}
-
-void trigger_exit_hook() {
-    log_debug("running exit hook...");
-    for (size_t i = 0; i < state.hooks.len; ++i) {
-        if (state.hooks.data[i].event == EVENT_EXIT) {
-            run_event_exit_hook(&state.hooks.data[i]);
-            ;
-        }
-    }
-}
-
-void trigger_input_hook(struct InputKey key) {
-    for (size_t i = 0; i < state.hooks.len; ++i) {
-        if (state.hooks.data[i].event == EVENT_KEY_INPUT) {
-            run_event_key_input_hook(key, &state.hooks.data[i]);
-            ;
-        }
-    }
 }
 
 static int lua_plugin_api_resolve(lua_State* L) {
@@ -593,16 +531,6 @@ void end_shell_state() {
     state = (struct ShellState){};
 }
 
-void add_hook(enum Event event, Actor actor) {
-    struct Hook hook = {
-        .kind  = PLUGIN_KIND_C,
-        .event = event,
-        .actor = actor,
-    };
-
-    vector_push(state.hooks, hook);
-}
-
 void set_to_foreground() {
     log_debug("setting to foreground");
     const int FD = STDIN_FILENO;
@@ -618,4 +546,46 @@ void set_to_foreground() {
     int ok = tcsetpgrp(FD, group_id);
     if (ok == -1)
         temporal_suicide_msg("could not set group id");
+}
+
+void unset_raw_mode() {
+    state.vars.term.in_raw_mode = false;
+    if (state.vars.term.got_original)
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &state.vars.term.orig_termios);
+    else
+        log_warn("there is no original termios?");
+}
+
+void set_raw_mode() {
+    state.vars.term.in_raw_mode = true;
+    log_debug("entering raw mode...");
+    if (!state.vars.term.got_original) {
+        tcgetattr(STDIN_FILENO, &state.vars.term.orig_termios);
+        atexit(unset_raw_mode);
+        state.vars.term.got_original = true;
+    }
+
+    struct termios raw = state.vars.term.orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);
+    raw.c_cc[VMIN]  = 0;
+    raw.c_cc[VTIME] = 1;
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    log_debug("entered raw mode");
+}
+
+void enter_alternate_screen() {
+    if (!state.vars.term.in_alternate_screen) {
+        state.vars.term.in_alternate_screen = true;
+        write(STDOUT_FILENO, "\x1b[?1049h", 8);
+        log_debug("entered alternate screen");
+    }
+}
+
+void leave_alternate_screen() {
+    if (state.vars.term.in_alternate_screen) {
+        state.vars.term.in_alternate_screen = false;
+        write(STDOUT_FILENO, "\x1b[?1049l", 8);
+        log_debug("left alternate screen");
+    }
 }

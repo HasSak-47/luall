@@ -155,6 +155,12 @@ local function setup_extension_namespace()
             full_color = full_color,
             reset_color = reset_color,
         },
+        reload = function()
+            lyra.core.state.reload = true
+        end,
+        exit = function()
+            lyra.core.state.is_running = false
+        end,
         prompt = prompt,
         builtin = {
             cd = function(args)
@@ -198,9 +204,10 @@ local function setup_extension_namespace()
     })
 end
 
+
 return {
     ---@return nil
     setup = function()
         setup_extension_namespace()
-    end,
+    end
 }

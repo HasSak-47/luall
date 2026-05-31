@@ -7,7 +7,6 @@
 
 #include <path_api.h>
 #include <state_api.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <term.h>
 
@@ -24,6 +23,7 @@
 #define LUA_STATE_MT "lyra.state"
 #define LUA_STATE_VARS_MT "lyra.state.vars"
 #define LUA_STATE_VARS_USER_MT "lyra.state.vars.user"
+#define LUA_STATE_VARS_TERM_MT "lyra.state.vars.term"
 #define LUA_STATE_VARS_ENV_MT "lyra.state.vars.env"
 
 // NOTE: maybe it would be neet to have it behave like a table if there are
@@ -71,11 +71,30 @@ int index_state_vars_user(lua_State* L) {
     return 1;
 }
 
+int index_state_vars_term(lua_State* L) {
+    const char* name = lua_tostring(L, -1);
+    if (strcmp(name, "in_raw_mode") == 0) {
+        lua_pushboolean(L, state.vars.term.in_raw_mode);
+    }
+    else if (strcmp(name, "in_alternate_screen") == 0) {
+        lua_pushboolean(L, state.vars.term.in_alternate_screen);
+    }
+    else {
+        return 0;
+    }
+    return 1;
+}
+
 int index_state_vars(lua_State* L) {
     const char* name = lua_tostring(L, -1);
     if (strcmp(name, "user") == 0) {
         lua_createtable(L, 1, 1);
         luaL_getmetatable(L, LUA_STATE_VARS_USER_MT);
+        lua_setmetatable(L, -2);
+    }
+    else if (strcmp(name, "term") == 0) {
+        lua_createtable(L, 1, 1);
+        luaL_getmetatable(L, LUA_STATE_VARS_TERM_MT);
         lua_setmetatable(L, -2);
     }
     else if (strcmp(name, "cwd") == 0) {
@@ -128,6 +147,7 @@ int index_state(lua_State* L) {
 
 int newindex_state(lua_State* L) {
     const char* name = lua_tostring(L, 2);
+    log_debug("new index state: %s", name);
     if (strcmp(name, "is_running") == 0) {
         state.is_running = lua_toboolean(L, 3);
     }
@@ -231,6 +251,14 @@ void create_state_vars_user_metatable(lua_State* L) {
     lua_pop(L, 1);
 }
 
+void create_state_vars_term_metatable(lua_State* L) {
+    if (luaL_newmetatable(L, LUA_STATE_VARS_TERM_MT)) {
+        lua_pushcfunction(L, index_state_vars_term);
+        lua_setfield(L, -2, "__index");
+    }
+    lua_pop(L, 1);
+}
+
 void create_state_vars_metatable(lua_State* L) {
     if (luaL_newmetatable(L, LUA_STATE_VARS_MT)) {
         lua_pushcfunction(L, index_state_vars);
@@ -255,6 +283,7 @@ void state_setup_lua_api(lua_State* L) {
     create_state_metatable(L);
     create_state_vars_metatable(L);
     create_state_vars_user_metatable(L);
+    create_state_vars_term_metatable(L);
     create_state_vars_env_metatable(L);
 
     lua_getglobal(L, "lyra");

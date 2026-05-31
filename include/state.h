@@ -10,20 +10,32 @@
 #endif
 
 #include <lua.h>
+
 #include <stdbool.h>
+
+#include <termios.h>
 
 #include "./bindgen_log.h"
 #include "./bindgen_plugin.h"
 #include "./input_key.h"
 #include "./path.h"
-#include "./plugin.h"
+#include "./plugin/definitions.h"
 
-// Luall.vars
+// Luall.vars.user
 struct User {
     struct String name;
     struct Path home;
 };
 
+// Luall.vars.term
+struct TerminalState {
+    struct termios orig_termios;
+    bool got_original;
+    bool in_raw_mode;
+    bool in_alternate_screen;
+};
+
+// Luall.vars
 struct Vars {
     struct User user;
     struct Path cwd;
@@ -31,6 +43,7 @@ struct Vars {
     int error;
 
     enum Level log_level;
+    struct TerminalState term;
 };
 
 struct Config {
@@ -78,5 +91,11 @@ void update_current_state();
 void trigger_enter_hook();
 void trigger_exit_hook();
 void trigger_input_hook(struct InputKey key);
+
+void unset_raw_mode();
+void set_raw_mode();
+
+void enter_alternate_screen();
+void leave_alternate_screen();
 
 #endif
