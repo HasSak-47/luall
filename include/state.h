@@ -55,8 +55,11 @@ struct Config {
 DefineVector(VectorHook, struct Hook);
 
 struct HookData {
+    // the event
     struct Event event;
+    // which plugin owns the event
     struct String owner;
+    // which plugin the hooks
     struct VectorHook hooks;
 };
 

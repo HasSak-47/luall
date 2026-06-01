@@ -8,7 +8,6 @@
 #include <path_api.h>
 #include <state_api.h>
 #include <stdlib.h>
-#include <term.h>
 
 #include <errno.h>
 #include <stdbool.h>

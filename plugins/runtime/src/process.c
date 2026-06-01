@@ -2,7 +2,6 @@
 #include <logs.h>
 #include <process.h>
 #include <state.h>
-#include <term.h>
 
 #include <stddef.h>
 #include <stdio.h>

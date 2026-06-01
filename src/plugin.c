@@ -9,11 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <lauxlib.h>
 #include <logs.h>
 #include <ly_string.h>
 #include <path.h>
+#include <plugin.h>
 #include <state.h>
-#include <lauxlib.h>
 
 static void free_argv(char** argv) {
     if (argv == NULL) {

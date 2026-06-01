@@ -16,6 +16,7 @@
 #include <pwd.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <vectors.h>
 
 struct ShellState state = {};
 
@@ -38,6 +39,28 @@ void init_shell_variables() {
     char buf[256] = {};
     getcwd(buf, 256);
     state.vars.cwd = path_parse(buf);
+}
+
+void init_shell_event_handler() {
+    struct HookData hd_enter = ((struct HookData){
+        .event = (struct Event){.kind = EVENT_ENTER, .name = {}},
+        .owner = {},
+        .hooks = {},
+    });
+    struct HookData hd_exit  = ((struct HookData){
+         .event = (struct Event){.kind = EVENT_EXIT, .name = {}},
+         .owner = {},
+         .hooks = {},
+    });
+
+    struct HookData hd_input = ((struct HookData){
+        .event = (struct Event){.kind = EVENT_KEY_INPUT, .name = {}},
+        .owner = {},
+        .hooks = {},
+    });
+    vector_push(state.event.hooks, hd_enter);
+    vector_push(state.event.hooks, hd_exit);
+    vector_push(state.event.hooks, hd_input);
 }
 
 void init_shell_config(const char* config_path, const char* cache_path) {
@@ -479,6 +502,7 @@ void init_shell_state(const char* config_path, const char* cache_path) {
 
     init_shell_variables();
     init_shell_config(config_path, cache_path);
+    init_shell_event_handler();
 
     char* path = path_get_string(state.config.config);
     log_debug("running init: %s", path);

@@ -59,7 +59,7 @@ int main(const int argc, const char* argv[]) {
     init_shell_state(config_path_copy, cache_path_copy);
 
     trigger_enter_hook();
-    log_debug("started first input event");
+
     struct InputKey key = input_key_none();
 
     log_debug("running...");

@@ -2,7 +2,7 @@
 #define __PLUGIN_DEFINITIONS__
 
 #include <lua.h>
-#include "ly_string.h"
+#include "../ly_string.h"
 
 #ifdef __cplusplus
 extern "C" {
