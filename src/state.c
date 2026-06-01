@@ -523,9 +523,9 @@ void end_shell_state() {
     delete_plugin_manager(state.manager);
 
     log_debug("removing hooks {}");
-    if (state.hooks.data != NULL) {
-        free(state.hooks.data);
-        state.hooks.data = NULL;
+    if (state.event.hooks.data != NULL) {
+        free(state.event.hooks.data);
+        state.event.hooks.data = NULL;
     }
     log_debug("setting state to {}");
     state = (struct ShellState){};
