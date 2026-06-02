@@ -47,7 +47,7 @@ $(OUT): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS)
 
 $(OUT_RUST_LIB): $(RUST_SRCS) | $(OBJ_DIRS)
-	cargo build
+	cargo build --release
 	cp $(SRC_RUST_LIB) $(OUT_RUST_LIB)
 	cbindgen -c ./cbindgen_plugin.toml --crate lyra_plugins --output include/bindgen_plugin.h
 	cbindgen -c ./cbindgen_log.toml --crate lyra_log --output include/bindgen_log.h

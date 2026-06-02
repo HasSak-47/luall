@@ -3,7 +3,7 @@ use std::{
     ptr,
 };
 
-use crate::{PluginData, PluginHandler, PluginKind, PluginManager, raw_bindings as rb};
+use crate::{PluginData, PluginHandler, PluginKind, PluginManager, raw_plugin_bindings as rb};
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
@@ -100,7 +100,10 @@ pub extern "C" fn manager_unload_plugin(
 
 #[allow(unused)]
 #[unsafe(no_mangle)]
-pub extern "C" fn manager_prepare_plugin(manager_ptr: *mut PluginManager, path: *const c_char) -> i32 {
+pub extern "C" fn manager_prepare_plugin(
+    manager_ptr: *mut PluginManager,
+    path: *const c_char,
+) -> i32 {
     let manager = unsafe { &mut (*manager_ptr) };
     let cstring = unsafe { CStr::from_ptr(path) };
     let path = url::Url::parse(cstring.to_str().unwrap()).unwrap();

@@ -3,7 +3,7 @@ pub mod ffi;
 pub mod version;
 
 /// cbindgen:ignore
-mod raw_bindings;
+mod raw_plugin_bindings;
 
 use std::{
     collections::{HashMap, HashSet},
@@ -272,11 +272,7 @@ impl PluginManager {
     /*
      * 'unload' loads a plugin into the memory but does not run it
      */
-    pub fn destroy_plugin(
-        &mut self,
-        name: &url::Url,
-        lua: *mut raw_bindings::lua_State,
-    ) -> Result<()> {
+    pub fn destroy_plugin(&mut self, name: &url::Url, lua: *mut bindings::lua_State) -> Result<()> {
         if !self.plugins.contains_key(name) {
             return Ok(());
         }

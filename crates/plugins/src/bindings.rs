@@ -1,4 +1,4 @@
-use super::raw_bindings as rb;
+use super::raw_plugin_bindings as rb;
 use crate::{PluginData, PluginKind};
 use anyhow::Result;
 
