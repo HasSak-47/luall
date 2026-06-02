@@ -6,18 +6,21 @@
 #include <state.h>
 
 #include <string.h>
+#include "ly_string.h"
+#include "plugin/definitions.h"
 
 int add_lua_event(lua_State* L) {
     const char* event_string = lua_tostring(L, 1);
-    enum Event event         = {};
+    const char* event_owner  = lua_tostring(L, 1);
+    struct Event event       = {};
     if (strcmp(event_string, "key_input") == 0) {
-        event = EVENT_KEY_INPUT;
+        event.kind = EVENT_KEY_INPUT;
     }
     else if (strcmp(event_string, "enter") == 0) {
-        event = EVENT_ENTER;
+        event.kind = EVENT_ENTER;
     }
     else if (strcmp(event_string, "exit") == 0) {
-        event = EVENT_EXIT;
+        event.kind = EVENT_EXIT;
     }
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
@@ -25,8 +28,11 @@ int add_lua_event(lua_State* L) {
 
     log_trace("binding lua funcion to a hook");
     struct Hook hook = {
-        .kind = PLUGIN_KIND_LUA, .event = event, .reference = reference};
-    vector_push(state.hooks, hook);
+        .kind      = HOOK_KIND_LUA,
+        .reference = reference,
+    };
+
+    on_event_hook(event, string_from_cstr(event_owner), hook);
 
     return 0;
 }

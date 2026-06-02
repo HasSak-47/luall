@@ -1,6 +1,7 @@
 #ifndef __STATE_H__
 #define __STATE_H__
 
+#include "vectors.h"
 #ifndef CACHE_PATH
 #define CACHE_PATH "./.ignore/cache"
 #endif
@@ -51,24 +52,29 @@ struct Config {
     struct Path cache;
 };
 
-struct Hook {
-    enum PluginKind kind;
-    enum Event event;
+DefineVector(VectorHook, struct Hook);
 
-    union {
-        Actor actor;
-        int reference;
-    };
+struct HookData {
+    // the event
+    struct Event event;
+    // which plugin owns the event
+    struct String owner;
+    // which plugin the hooks
+    struct VectorHook hooks;
 };
 
-DefineVector(VectorHook, struct Hook);
+DefineVector(VectorHookData, struct HookData);
+
+struct EventHandler {
+    struct VectorHookData hooks;
+};
 
 struct ShellState {
     // args passed to the shell
     struct VectorString args;
     struct Vars vars;
     struct Config config;
-    struct VectorHook hooks;
+    struct EventHandler event;
 
     struct PluginManager* manager;
     bool is_running;
