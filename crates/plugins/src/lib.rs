@@ -127,9 +127,8 @@ pub struct PluginData {
     // core plugins are at CORE_PLUGIN_PATH/*
     // path plugins are at the specified path
     // git plugins are stored into: $STATE_PATH/lyra/plugins/{name}
-
-    // binary cache is at $STATE_PATH/lyra/plugin_artifacts/{name}
     pub root_path: PathBuf,
+    // binary cache is at $STATE_PATH/lyra/plugin_artifacts/{name}
     pub artifact_path: PathBuf,
     pub handler: PluginHandlerWrapper,
 }

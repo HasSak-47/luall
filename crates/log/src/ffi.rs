@@ -7,7 +7,7 @@ use std::{
 use log::{Level as LogLevel, LevelFilter as LogLevelFilter, RecordBuilder, logger};
 
 use env_logger::{
-    Target,
+    Env, Target,
     fmt::style::{AnsiColor, Style},
 };
 
@@ -50,9 +50,9 @@ generate_from!(LogLevel, Level;, Error, Warn, Info, Debug, Trace);
 #[unsafe(no_mangle)]
 pub extern "C" fn init_logger(fd: c_int) {
     let writter = unsafe { std::fs::File::from_raw_fd(fd) };
-    env_logger::builder()
+    env_logger::Builder::from_env(Env::new().filter("LYRA_LOG").default_filter_or("trace"))
+        .parse_default_env()
         .target(Target::Pipe(Box::new(writter)))
-        .filter_level(LogLevelFilter::Trace)
         .write_style(env_logger::WriteStyle::Always)
         .format(|f, record| {
             use std::io::Write;
@@ -75,7 +75,7 @@ pub extern "C" fn init_logger(fd: c_int) {
 
             writeln!(
                 f,
-                "{level_style}{level}{level_style:#} {target_style}{target:>max_target_width$}{target_style:#}:{line:4<} > {}",
+                "{level_style}{level}{level_style:#} {target_style}{target:>max_target_width$}{target_style:#}:{line:<4} > {}",
                 record.args(),
             )
         })

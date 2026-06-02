@@ -98,4 +98,6 @@ void set_raw_mode();
 void enter_alternate_screen();
 void leave_alternate_screen();
 
+int register_plugin_module_paths(lua_State* L, const char* plugin_path);
+
 #endif

@@ -17,6 +17,7 @@
 #include "io_api.h"
 
 int plugin_setup(lua_State* L) {
+    log_debug("initing runtime plugin...");
     luaL_requiref(L, "base", luaopen_base, true);
     luaL_requiref(L, "io", luaopen_io, true);
     luaL_requiref(L, "math", luaopen_math, true);

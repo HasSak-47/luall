@@ -9,11 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <lauxlib.h>
 #include <logs.h>
 #include <ly_string.h>
 #include <path.h>
+#include <plugin.h>
 #include <state.h>
-#include <lauxlib.h>
 
 static void free_argv(char** argv) {
     if (argv == NULL) {
@@ -100,10 +101,9 @@ static void complile_c_plugin_no_makefile(
 
     struct VectorString args = {};
     log_debug("creating argv...");
-    log_debug("pushing compiler name");
     vector_push(args, string_from_cstr("/bin/gcc"));
 
-    log_debug("pushing compiling flags");
+    log_trace("pushing compiling flags");
     for (size_t i = 0; i < sizeof flags / sizeof flags[0]; ++i) {
         vector_push(args, string_from_cstr(flags[i]));
     }
@@ -112,7 +112,7 @@ static void complile_c_plugin_no_makefile(
     vector_push(args, string_from_cstr(include_path_str));
     free(include_path_str);
 
-    log_debug("pushing units");
+    log_trace("pushing units");
     for (size_t i = 0; i < compilation_units.len; ++i) {
         char* path_str = path_get_string(compilation_units.data[i]);
         log_trace("\tpushing unit: %s @ %p", path_str, path_str);
@@ -121,14 +121,14 @@ static void complile_c_plugin_no_makefile(
         free(path_str);
     }
 
-    log_debug("generating compiler output path");
+    log_trace("generating compiler output path");
     vector_push(args, string_from_cstr("-o"));
     vector_push(args, string_from_cstr(cache_str));
 
-    log_debug("generating argv");
+    log_trace("generating argv");
     char** argv = malloc(sizeof(char*) * (args.len + 1));
 
-    log_debug("copying from String to cstr");
+    log_trace("copying from String to cstr");
     for (size_t i = 0; i < args.len; ++i) {
         argv[i] = string_to_cstring(args.data[i]);
         log_trace("added: %s", argv[i]);

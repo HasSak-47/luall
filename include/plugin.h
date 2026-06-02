@@ -10,6 +10,9 @@ typedef typeof(plugin_destruct)* DestructFunction;
 struct PluginHandler {
     enum PluginKind kind;
     int setup_table_reference;
+    int export_reference;
+    int extend_reference;
+
     union {
         struct {
             void* handler;
@@ -20,8 +23,6 @@ struct PluginHandler {
         struct {
             char* lua_path;
             int setup_reference;
-            int export_reference;
-            int provides_reference;
             int destruct_reference;
         };
     };
