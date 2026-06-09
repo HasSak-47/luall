@@ -1,3 +1,4 @@
+#include "events.h"
 #include <lauxlib.h>
 #include <lua.h>
 
@@ -46,99 +47,60 @@ void on_event(struct Event event, struct String owner, EventActor actor) {
     on_event_hook(event, owner, hook);
 }
 
-void trigger_hook(struct Event event) {
+void trigger_event(struct Event event, PushEventArg push, void* data) {
     for (size_t i = 0; i < state.event.hooks.len; ++i) {
         struct HookData* hd = &state.event.hooks.data[i];
         if (hd->event.kind == event.kind) {
-            if (hd->event.kind == EVENT_USER_DEFINED) {
-                // TODO:...
+            if (event.kind == EVENT_USER_DEFINED) {
+                // TODO: ...
+                break;
             }
-            else {
-                for (size_t j = 0; j < hd->hooks.len; ++j) {
-                    struct Hook* hook = &hd->hooks.data[j];
-                    switch (hook->kind) {
-                    case HOOK_KIND_BINARY:
-                        lua_pushcfunction(state.L, hd->hooks.data[j].actor);
-                        break;
-                    case HOOK_KIND_LUA:
-                        lua_rawgeti(
-                            state.L, LUA_REGISTRYINDEX, hook->reference);
-                        break;
-                    }
-                    lua_pcall(state.L, 1, 0, 0);
+            for (size_t j = 0; j < hd->hooks.len; ++j) {
+                struct Hook* hook = &hd->hooks.data[j];
+                switch (hook->kind) {
+                case HOOK_KIND_BINARY:
+                    lua_pushcfunction(state.L, hd->hooks.data[j].actor);
+                    break;
+                case HOOK_KIND_LUA:
+                    lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
+                    break;
                 }
+                size_t arg_len = push(state.L, data);
+                lua_pcall(state.L, arg_len, 0, 0);
             }
-            break;
         }
     }
+}
+
+static int push_empty(lua_State* _state, void* _void) {
+    return 0;
 }
 
 void trigger_enter_hook() {
     log_debug("running enter hooks");
-    for (size_t i = 0; i < state.event.hooks.len; ++i) {
-        struct HookData* hd = &state.event.hooks.data[i];
-        if (hd->event.kind == EVENT_ENTER) {
-            log_debug("\trunning hook");
-            for (size_t j = 0; j < hd->hooks.len; ++j) {
-                struct Hook* hook = &hd->hooks.data[j];
-                switch (hook->kind) {
-                case HOOK_KIND_BINARY:
-                    lua_pushcfunction(state.L, hd->hooks.data[j].actor);
-                    break;
-                case HOOK_KIND_LUA:
-                    lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
-                    break;
-                }
-                lua_pcall(state.L, 1, 0, 0);
-            }
-            break;
-        }
-    }
+    trigger_event(
+        (struct Event){
+            EVENT_ENTER,
+            {},
+        },
+        (PushEventArg)push_empty, NULL);
 }
 
 void trigger_exit_hook() {
     log_debug("running exit hooks");
-    for (size_t i = 0; i < state.event.hooks.len; ++i) {
-        struct HookData* hd = &state.event.hooks.data[i];
-        if (hd->event.kind == EVENT_EXIT) {
-            log_debug("running enter hook");
-            for (size_t j = 0; j < hd->hooks.len; ++j) {
-                struct Hook* hook = &hd->hooks.data[j];
-                switch (hook->kind) {
-                case HOOK_KIND_BINARY:
-                    lua_pushcfunction(state.L, hd->hooks.data[j].actor);
-                    break;
-                case HOOK_KIND_LUA:
-                    lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
-                    break;
-                }
-                lua_pcall(state.L, 1, 0, 0);
-            }
-            break;
-        }
-    }
+    trigger_event(
+        (struct Event){
+            EVENT_EXIT,
+            {},
+        },
+        (PushEventArg)push_empty, NULL);
 }
 
 void trigger_input_hook(struct InputKey key) {
-    push_input_key(state.L, key);
-    for (size_t i = 0; i < state.event.hooks.len; ++i) {
-        struct HookData* hd = &state.event.hooks.data[i];
-        if (hd->event.kind == EVENT_KEY_INPUT) {
-            for (size_t j = 0; j < hd->hooks.len; ++j) {
-                struct Hook* hook = &hd->hooks.data[j];
-
-                switch (hook->kind) {
-                case HOOK_KIND_BINARY:
-                    lua_pushcfunction(state.L, hd->hooks.data[j].actor);
-                    break;
-                case HOOK_KIND_LUA:
-                    lua_rawgeti(state.L, LUA_REGISTRYINDEX, hook->reference);
-                    break;
-                }
-                lua_pushvalue(state.L, -2);
-                lua_pcall(state.L, 1, 0, 0);
-            }
-            return;
-        }
-    }
+    trigger_event(
+        (struct Event){
+            EVENT_KEY_INPUT,
+            {},
+        },
+        (PushEventArg)push_input_key, &key);
 }

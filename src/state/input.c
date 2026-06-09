@@ -184,11 +184,13 @@ void create_input_key_metatable(lua_State* L) {
     lua_pop(L, 1);
 }
 
-void push_input_key(lua_State* L, struct InputKey key) {
+int push_input_key(lua_State* L, struct InputKey* key) {
     struct InputKey* value = lua_newuserdata(L, sizeof(struct InputKey));
-    *value                 = key;
+    *value                 = *key;
     luaL_getmetatable(L, LUA_INPUT_KEY_MT);
     lua_setmetatable(L, -2);
+
+    return 1;
 }
 
 static uint8_t parse_modifier_code(int code) {

@@ -86,7 +86,7 @@ extern struct ShellState state;
 
 bool read_input_key(struct InputKey* key);
 void create_input_key_metatable(lua_State* L);
-void push_input_key(lua_State* L, struct InputKey key);
+int push_input_key(lua_State* L, struct InputKey* key);
 
 void init_shell_state(const char* config_path, const char* cache_path);
 void end_shell_state();
