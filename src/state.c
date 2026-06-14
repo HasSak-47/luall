@@ -48,9 +48,9 @@ void init_shell_event_handler() {
         .hooks = {},
     });
     struct HookData hd_exit  = ((struct HookData){
-         .event = (struct Event){.kind = EVENT_EXIT, .name = {}},
-         .owner = {},
-         .hooks = {},
+        .event = (struct Event){.kind = EVENT_EXIT, .name = {}},
+        .owner = {},
+        .hooks = {},
     });
 
     struct HookData hd_input = ((struct HookData){
@@ -245,6 +245,7 @@ static void init_plugin_table() {
 void init_shell_state(const char* config_path, const char* cache_path) {
     state.L = luaL_newstate();
     // luaL_openlibs(state.L);
+    create_signal_metatable(state.L);
     create_input_key_metatable(state.L);
     lua_newtable(state.L);
     log_debug("setting up plugin manager");

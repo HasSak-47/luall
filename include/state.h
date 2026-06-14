@@ -18,9 +18,9 @@
 
 #include "./bindgen_log.h"
 #include "./bindgen_plugin.h"
+#include "./events.h"
 #include "./input_key.h"
 #include "./path.h"
-#include "./plugin/definitions.h"
 
 // Luall.vars.user
 struct User {
@@ -84,9 +84,31 @@ struct ShellState {
 
 extern struct ShellState state;
 
+struct Signal {};
+
+// input stuff
 bool read_input_key(struct InputKey* key);
 void create_input_key_metatable(lua_State* L);
 int push_input_key(lua_State* L, struct InputKey* key);
+
+// signal stuff
+void create_signal__metatable(lua_State* L);
+void signal_carrier(int code);
+void handle_sigint(int code);
+void handle_sigterm(int code);
+void handle_sigkill(int code);
+void handle_sigstop(int code);
+void handle_sigcont(int code);
+void handle_sigquit(int code);
+void handle_sighup(int code);
+void handle_sigchld(int code);
+void handle_sigalrm(int code);
+void handle_sigpipe(int code);
+void handle_sigsegv(int code);
+void handle_sigfpe(int code);
+void handle_sigabrt(int code);
+void handle_sigusr1(int code);
+void handle_sigusr2(int code);
 
 void init_shell_state(const char* config_path, const char* cache_path);
 void end_shell_state();

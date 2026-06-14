@@ -104,3 +104,28 @@ void trigger_input_hook(struct InputKey key) {
         },
         (PushEventArg)push_input_key, &key);
 }
+
+void create_event(struct String name, struct String owner) {
+    struct HookData hook = ((struct HookData){
+        .event = (struct Event){.kind = EVENT_ENTER, .name = name},
+        .owner = owner,
+        .hooks = {},
+    });
+
+    vector_push(state.event.hooks, hook);
+}
+
+struct Event hook_input() {
+    return (struct Event){.kind = EVENT_KEY_INPUT, .name = {}};
+}
+struct Event hook_enter() {
+    return (struct Event){.kind = EVENT_ENTER, .name = {}};
+}
+struct Event hook_exit() {
+    return (struct Event){.kind = EVENT_EXIT, .name = {}};
+}
+struct Event hook_user(struct String name) {
+    return (struct Event){.kind = EVENT_USER_DEFINED, .name = name};
+}
+
+void signal_handler(int code) {}

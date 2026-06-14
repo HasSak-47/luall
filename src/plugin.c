@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <dlfcn.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -10,6 +11,7 @@
 #include <string.h>
 
 #include <lauxlib.h>
+
 #include <logs.h>
 #include <ly_string.h>
 #include <path.h>
@@ -435,9 +437,9 @@ void unload_lua_plugin(lua_State* state, struct PluginHandler* p) {
         p->export_reference = 0;
     }
 
-    if (p->provides_reference != 0) {
-        luaL_unref(state, LUA_REGISTRYINDEX, p->provides_reference);
-        p->provides_reference = 0;
+    if (p->extend_reference != 0) {
+        luaL_unref(state, LUA_REGISTRYINDEX, p->extend_reference);
+        p->extend_reference = 0;
     }
 
     free(p->lua_path);

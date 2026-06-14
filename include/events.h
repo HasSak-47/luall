@@ -8,6 +8,7 @@ enum EventKind {
     EVENT_KEY_INPUT,
     EVENT_ENTER,
     EVENT_EXIT,
+    EVENT_SIGNAL,
     EVENT_USER_DEFINED,
 };
 
@@ -31,6 +32,11 @@ struct Hook {
         int reference;
     };
 };
+
+struct Event hook_input();
+struct Event hook_enter();
+struct Event hook_exit();
+struct Event hook_user(struct String name);
 
 typedef int (*PushEventArg)(lua_State* L, void* data);
 
