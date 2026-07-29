@@ -4,8 +4,6 @@
 #include <state.h>
 #define LUA_SIGNAL_METATABLE "lyra.signal"
 
-void signal_carrier(int code) {}
-
 void create_signal_metatable(lua_State* L) {
     if (luaL_newmetatable(L, LUA_SIGNAL_METATABLE)) {
     }

@@ -23,6 +23,7 @@
 #define LUA_STATE_VARS_MT "lyra.state.vars"
 #define LUA_STATE_VARS_USER_MT "lyra.state.vars.user"
 #define LUA_STATE_VARS_TERM_MT "lyra.state.vars.term"
+#define LUA_STATE_VARS_TERM_WINSIZE_MT "lyra.state.vars.term.winsize"
 #define LUA_STATE_VARS_ENV_MT "lyra.state.vars.env"
 
 // NOTE: maybe it would be neet to have it behave like a table if there are
@@ -70,10 +71,35 @@ int index_state_vars_user(lua_State* L) {
     return 1;
 }
 
+int index_state_vars_term_winsize(lua_State* L) {
+    const char* name = lua_tostring(L, -1);
+    if (strcmp(name, "row") == 0) {
+        lua_pushinteger(L, state.vars.term.window_size.ws_row);
+    }
+    else if (strcmp(name, "col") == 0) {
+        lua_pushinteger(L, state.vars.term.window_size.ws_col);
+    }
+    else if (strcmp(name, "xpixel") == 0) {
+        lua_pushinteger(L, state.vars.term.window_size.ws_xpixel);
+    }
+    else if (strcmp(name, "ypixel") == 0) {
+        lua_pushinteger(L, state.vars.term.window_size.ws_ypixel);
+    }
+    else {
+        return 0;
+    }
+    return 1;
+}
+
 int index_state_vars_term(lua_State* L) {
     const char* name = lua_tostring(L, -1);
     if (strcmp(name, "in_raw_mode") == 0) {
         lua_pushboolean(L, state.vars.term.in_raw_mode);
+    }
+    if (strcmp(name, "winsize") == 0) {
+        lua_createtable(L, 1, 1);
+        luaL_getmetatable(L, LUA_STATE_VARS_TERM_WINSIZE_MT);
+        lua_setmetatable(L, -2);
     }
     else if (strcmp(name, "in_alternate_screen") == 0) {
         lua_pushboolean(L, state.vars.term.in_alternate_screen);
@@ -149,6 +175,7 @@ int newindex_state(lua_State* L) {
     log_debug("new index state: %s", name);
     if (strcmp(name, "is_running") == 0) {
         state.is_running = lua_toboolean(L, 3);
+        log_debug("state set to running == %d", state.is_running);
     }
     else if (strcmp(name, "reload") == 0) {
         state.reload = lua_toboolean(L, 3);
@@ -250,6 +277,14 @@ void create_state_vars_user_metatable(lua_State* L) {
     lua_pop(L, 1);
 }
 
+void create_state_vars_term_winsize_metatable(lua_State* L) {
+    if (luaL_newmetatable(L, LUA_STATE_VARS_TERM_WINSIZE_MT)) {
+        lua_pushcfunction(L, index_state_vars_term_winsize);
+        lua_setfield(L, -2, "__index");
+    }
+    lua_pop(L, 1);
+}
+
 void create_state_vars_term_metatable(lua_State* L) {
     if (luaL_newmetatable(L, LUA_STATE_VARS_TERM_MT)) {
         lua_pushcfunction(L, index_state_vars_term);
@@ -283,6 +318,7 @@ void state_setup_lua_api(lua_State* L) {
     create_state_vars_metatable(L);
     create_state_vars_user_metatable(L);
     create_state_vars_term_metatable(L);
+    create_state_vars_term_winsize_metatable(L);
     create_state_vars_env_metatable(L);
 
     lua_getglobal(L, "lyra");

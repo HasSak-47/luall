@@ -14,19 +14,20 @@ enum EventKind {
 };
 
 enum Signal {
-    SIGNAL_INT  = SIGINT,
-    SIGNAL_TERM = SIGTERM,
-    SIGNAL_CONT = SIGCONT,
-    SIGNAL_QUIT = SIGQUIT,
-    SIGNAL_HUP  = SIGHUP,
-    SIGNAL_CHLD = SIGCHLD,
-    SIGNAL_ALRM = SIGALRM,
-    SIGNAL_PIPE = SIGPIPE,
-    SIGNAL_SEGV = SIGSEGV,
-    SIGNAL_FPE  = SIGFPE,
-    SIGNAL_ABRT = SIGABRT,
-    SIGNAL_USR1 = SIGUSR1,
-    SIGNAL_USR2 = SIGUSR2,
+    SIGNAL_INT           = SIGINT,
+    SIGNAL_TERM          = SIGTERM,
+    SIGNAL_CONT          = SIGCONT,
+    SIGNAL_QUIT          = SIGQUIT,
+    SIGNAL_HUP           = SIGHUP,
+    SIGNAL_CHLD          = SIGCHLD,
+    SIGNAL_ALRM          = SIGALRM,
+    SIGNAL_PIPE          = SIGPIPE,
+    SIGNAL_SEGV          = SIGSEGV,
+    SIGNAL_FPE           = SIGFPE,
+    SIGNAL_ABRT          = SIGABRT,
+    SIGNAL_USR1          = SIGUSR1,
+    SIGNAL_USR2          = SIGUSR2,
+    SIGNAL_WINDOW_CHANGE = SIGWINCH,
 };
 
 struct Event {

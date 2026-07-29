@@ -266,10 +266,13 @@ static void complile_c_plugin(const struct PluginData* data) {
 }
 
 static struct PluginHandler _prepare_binary_plugin(const char* path) {
+    log_debug("loading binary at: %s", path);
     struct PluginHandler handler = {};
     handler.handler              = dlopen(path, RTLD_LAZY);
     handler.setup                = dlsym(handler.handler, "plugin_setup");
     handler.destruct             = dlsym(handler.handler, "plugin_destruct");
+    log_debug(
+        "symbols %p %p %p", handler.handler, handler.setup, handler.destruct);
 
     return handler;
 }

@@ -68,8 +68,6 @@ pid_t command_run(struct Command* p) {
         log_debug("[child]: name: %s", p->cmd);
         if (p->foreground) {
             log_debug("setting to foreground");
-            unset_raw_mode();
-            // set_to_foreground();
             log_debug("[child]: child is foreground");
         }
         log_debug("[child]: setting io binds");
@@ -96,6 +94,7 @@ pid_t command_run(struct Command* p) {
     }
 
     // parent
+
     log_debug("[parent]: cleaning command data");
     for (char** arg = p->args.data; *arg != NULL; ++arg) {
         log_debug("[parent]: removing arg: %p %s", *arg, *arg);
@@ -116,9 +115,6 @@ int process_wait(pid_t pid) {
     if (waitpid(pid, &status, 0) == -1) {
         temporal_suicide_msg("[parent]: waitpid failed");
     }
-
-    // set_to_foreground();
-    set_raw_mode();
 
     return status;
 }

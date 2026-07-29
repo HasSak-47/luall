@@ -125,13 +125,8 @@ end
 
 ---@return nil
 local function render_input(data, index)
-    -- local line = "\r" .. lyra.api.prompt() .. data
-    -- local line = input_state.data
     local tokens = lyra.api.lang.tokenize(data)
-
     io.stdout:write("\r" .. lyra.api.prompt() .. format_tokens(data, tokens))
-
-    -- io.stdout:write(line)
     io.stdout:write("\27[K")
 
     local step_back = data:len() - index

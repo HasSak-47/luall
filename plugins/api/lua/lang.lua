@@ -371,21 +371,26 @@ end
 ---@param output LyraFile|nil
 ---@return integer
 local function run_command(command, output)
+    lyra.api.log.debug('executing single binary')
     if output ~= nil then
         command:bind(output, lyra.api.process.WRITE)
     end
 
+    -- unset raw mode for child
+    lyra.api.unset_raw_mode()
     command:run()
     if output ~= nil then
         output:close()
     end
     local status = command:wait()
+    lyra.api.set_raw_mode()
     return status
 end
 
 ---@param process LyraFrontProcess
 ---@return nil
 local function run_cmd(process)
+    lyra.api.log.debug('execting single command')
     local command, name, args = make_command(process)
 
     if name == "exit" then

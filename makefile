@@ -30,7 +30,7 @@ OBJ_DIRS := $(sort $(dir $(OBJS)))
 OUT := lyra
 
 CC := gcc
-CFLAGS := -O3 -g3 -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
+CFLAGS := -g3 -fpic -I include -Wall $(LUA_CFLAGS) -DBUNDLE_EXT=\"$(SHLIB_EXT)\"
 LDFLAGS := -o $(OUT) -export-dynamic $(LUA_LIBS)
 
 build: $(OBJ_DIRS) rustbuild $(OUT)
@@ -47,7 +47,7 @@ $(OUT): $(OBJS)
 	$(CC) $(OBJS) $(LDFLAGS)
 
 $(OUT_RUST_LIB): $(RUST_SRCS) | $(OBJ_DIRS)
-	cargo build --release
+	cargo build
 	cp $(SRC_RUST_LIB) $(OUT_RUST_LIB)
 	cbindgen -c ./cbindgen_plugin.toml --crate lyra_plugins --output include/bindgen_plugin.h
 	cbindgen -c ./cbindgen_log.toml --crate lyra_log --output include/bindgen_log.h

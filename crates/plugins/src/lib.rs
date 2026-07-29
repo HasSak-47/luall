@@ -153,6 +153,16 @@ const STATE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     }
 });
 
+static mut SEED: u64 = 10;
+fn rand() -> u64 {
+    unsafe {
+        SEED ^= SEED << 13;
+        SEED ^= SEED >> 7;
+        SEED ^= SEED << 17;
+        SEED % 1000
+    }
+}
+
 impl PluginData {
     fn _resolve_from_disk(
         root_path: PathBuf,
@@ -170,6 +180,8 @@ impl PluginData {
         let mut artifact_path = STATE_PATH.clone();
         artifact_path.push("plugin_artifacts");
         artifact_path.push(&manifest.header.name);
+        artifact_path.push(&format!("{}-{}", manifest.header.name, rand()));
+        artifact_path.set_extension("so");
 
         return Ok(PluginData {
             source: source.clone(),
@@ -281,6 +293,7 @@ impl PluginManager {
         let mut handler = std::mem::take(&mut data.handler);
         handler.unload_plugin(lua)?;
         data.handler = handler;
+        self.prepared_plugins.remove(name);
         return Ok(());
     }
 

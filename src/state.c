@@ -1,3 +1,4 @@
+#include <bits/types/siginfo_t.h>
 #include <lauxlib.h>
 #include <lua.h>
 
@@ -15,11 +16,30 @@
 
 #include <dlfcn.h>
 #include <pwd.h>
+#include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vectors.h>
 
 struct ShellState state = {};
+
+static void signal_handler(int signal, siginfo_t* info, void* context) {
+    enum Signal s = signal;
+    log_debug("got signal: %d", signal);
+    switch (s) {
+    case SIGWINCH: {
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &state.vars.term.window_size);
+    } break;
+    default:
+        break;
+    }
+    trigger_event(
+        (struct Event){
+            EVENT_SIGNAL,
+            {},
+        },
+        (PushEventArg)push_signal, &s);
+}
 
 /**
  * sets the state of the shell
@@ -40,6 +60,16 @@ void init_shell_variables() {
     char buf[256] = {};
     getcwd(buf, 256);
     state.vars.cwd = path_parse(buf);
+
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &state.vars.term.window_size);
+
+    state.sa.sa_sigaction = signal_handler;
+    sigemptyset(&state.sa.sa_mask);
+
+    if (sigaction(SIGWINCH, &state.sa, NULL) == -1) {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void init_shell_event_handler() {
@@ -240,16 +270,6 @@ static void init_plugin_table() {
     lua_setfield(state.L, -2, "config");
 }
 
-static void signal_handler(int signal) {
-    enum Signal s = signal;
-    trigger_event(
-        (struct Event){
-            EVENT_SIGNAL,
-            {},
-        },
-        (PushEventArg)push_signal, &s);
-}
-
 /**
  * sets the state of the shell
  */
@@ -282,12 +302,6 @@ void init_shell_state(const char* config_path, const char* cache_path) {
         exit(-1);
     }
     free(path);
-
-    state.sa.sa_handler = signal_handler;
-
-    sigemptyset(&state.sa.sa_mask);
-    sigaddset(&state.sa.sa_mask, SIGWINCH);
-    sigaddset(&state.sa.sa_mask, SIGCHLD);
 }
 
 /**
@@ -299,11 +313,19 @@ void get_current_state() {}
  * cleanins the shell state
  */
 void end_shell_state() {
+    if (state.vars.term.in_alternate_screen) {
+        leave_alternate_screen();
+    }
+    if (state.vars.term.in_raw_mode) {
+        unset_raw_mode();
+    }
+
     const CIteratorString* iter = get_plugin_iterator(state.manager);
     const char* next            = NULL;
 
     log_debug("unloading plugins");
     while ((next = next_plugin_name(iter)) != NULL) {
+        log_debug("unloading: %s", next);
         manager_unload_plugin(state.L, state.manager, next);
     }
 

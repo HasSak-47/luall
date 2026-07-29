@@ -20,6 +20,7 @@ pub extern "C" fn plugin_get_name(plugin: *const PluginData) -> *mut c_char {
 pub extern "C" fn plugin_get_compilation_path(plugin: *const PluginData) -> *mut c_char {
     let plugin = unsafe { &*plugin };
     let mut path = plugin.artifact_path.clone();
+    path.pop();
     path.push("compilation");
 
     let s = CString::new(path.to_str().unwrap()).unwrap();
@@ -31,11 +32,8 @@ pub extern "C" fn plugin_get_compilation_path(plugin: *const PluginData) -> *mut
 #[unsafe(no_mangle)]
 pub extern "C" fn plugin_get_shared_object_path(plugin: *const PluginData) -> *mut c_char {
     let plugin = unsafe { &*plugin };
-    let mut path = plugin.artifact_path.clone();
-    path.push(&plugin.manifest.header.name);
-    path.set_extension("so");
 
-    let s = CString::new(path.to_str().unwrap()).unwrap();
+    let s = CString::new(plugin.artifact_path.to_str().unwrap()).unwrap();
 
     return s.into_raw();
 }

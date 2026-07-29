@@ -2,6 +2,8 @@
 #define __STATE_H__
 
 #include <signal.h>
+#include <sys/ioctl.h>
+
 #ifndef CACHE_PATH
 #define CACHE_PATH "./.ignore/cache"
 #endif
@@ -35,6 +37,8 @@ struct TerminalState {
     bool got_original;
     bool in_raw_mode;
     bool in_alternate_screen;
+
+    struct winsize window_size;
 };
 
 // Luall.vars

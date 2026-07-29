@@ -13,10 +13,11 @@ local input_state = {
 
 local function submit_input()
     local line = input_state.data
+
+    lyra.api.render_input(line, input_state.index)
+    io.stdout:write('\n')
+
     local tokens = lyra.api.lang.tokenize(line)
-
-    io.stdout:write("\r" .. lyra.api.prompt() .. lyra.api.format_tokens(line, tokens) .. "\n")
-
     if line ~= "" then
         local ok, err = pcall(function()
             local tree = lyra.api.lang.parse(tokens)
@@ -85,7 +86,7 @@ local function handle_input(input)
 
             local available = #history.history
             if available == 0 then
-                lyra.api.render_input(input_state.data, input_state.index)
+                -- lyra.api.render_input(input_state.data, input_state.index)
                 return
             end
 
@@ -100,7 +101,7 @@ local function handle_input(input)
         elseif input.special == "down" then
             local history = input_state.history
             if history.index == 0 then
-                lyra.api.render_input(input_state.data, input_state.index)
+                -- lyra.api.render_input(input_state.data, input_state.index)
                 return
             end
 
