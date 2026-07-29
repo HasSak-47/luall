@@ -7,6 +7,7 @@
 #include <path.h>
 #include <plugin.h>
 #include <plugin/definitions.h>
+#include <signal.h>
 #include <state.h>
 
 #include <stdio.h>
@@ -239,6 +240,16 @@ static void init_plugin_table() {
     lua_setfield(state.L, -2, "config");
 }
 
+static void signal_handler(int signal) {
+    enum Signal s = signal;
+    trigger_event(
+        (struct Event){
+            EVENT_SIGNAL,
+            {},
+        },
+        (PushEventArg)push_signal, &s);
+}
+
 /**
  * sets the state of the shell
  */
@@ -271,6 +282,12 @@ void init_shell_state(const char* config_path, const char* cache_path) {
         exit(-1);
     }
     free(path);
+
+    state.sa.sa_handler = signal_handler;
+
+    sigemptyset(&state.sa.sa_mask);
+    sigaddset(&state.sa.sa_mask, SIGWINCH);
+    sigaddset(&state.sa.sa_mask, SIGCHLD);
 }
 
 /**

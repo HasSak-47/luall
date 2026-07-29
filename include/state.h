@@ -1,7 +1,7 @@
 #ifndef __STATE_H__
 #define __STATE_H__
 
-#include "vectors.h"
+#include <signal.h>
 #ifndef CACHE_PATH
 #define CACHE_PATH "./.ignore/cache"
 #endif
@@ -21,6 +21,7 @@
 #include "./events.h"
 #include "./input_key.h"
 #include "./path.h"
+#include "./vectors.h"
 
 // Luall.vars.user
 struct User {
@@ -75,6 +76,7 @@ struct ShellState {
     struct Vars vars;
     struct Config config;
     struct EventHandler event;
+    struct sigaction sa;
 
     struct PluginManager* manager;
     bool is_running;
@@ -84,31 +86,14 @@ struct ShellState {
 
 extern struct ShellState state;
 
-struct Signal {};
-
 // input stuff
 bool read_input_key(struct InputKey* key);
 void create_input_key_metatable(lua_State* L);
 int push_input_key(lua_State* L, struct InputKey* key);
 
 // signal stuff
-void create_signal__metatable(lua_State* L);
-void signal_carrier(int code);
-void handle_sigint(int code);
-void handle_sigterm(int code);
-void handle_sigkill(int code);
-void handle_sigstop(int code);
-void handle_sigcont(int code);
-void handle_sigquit(int code);
-void handle_sighup(int code);
-void handle_sigchld(int code);
-void handle_sigalrm(int code);
-void handle_sigpipe(int code);
-void handle_sigsegv(int code);
-void handle_sigfpe(int code);
-void handle_sigabrt(int code);
-void handle_sigusr1(int code);
-void handle_sigusr2(int code);
+void create_signal_metatable(lua_State* L);
+int push_signal(lua_State* L, enum Signal* signal);
 
 void init_shell_state(const char* config_path, const char* cache_path);
 void end_shell_state();
