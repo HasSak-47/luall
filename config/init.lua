@@ -45,13 +45,6 @@ end
 ---@return nil
 local function handle_input(input)
     if input.kind == "letter" then
-        if input.ctrl then
-            if input.letter == "c" then
-                lyra.core.state.is_running = false
-            end
-            return
-        end
-
         local start = input_state.data:sub(1, input_state.index)
         local finish = input_state.data:sub(input_state.index + 1)
         input_state.data = start .. input.letter .. finish

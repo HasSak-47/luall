@@ -3,14 +3,15 @@
 ---@class LyraPluginData
 
 ---@class LyraPluginExports: table
+
 ---@alias LyraPluginConfig table<string, table>
 
 ---@class LyraPluginApi
 ---@field resolve fun(url: string): LyraPluginData|nil
 ---@field prepare fun(url: string): LyraPluginData|nil
+---@field require fun(url: string, opts?: table): LyraPluginExports
+---@field destroy fun(url: string)
 ---@field config LyraPluginConfig
----@field require fun(url: string, opts: table|nil): LyraPluginExports
----@field destroy fun(url: string): nil
 
 ---@class LyraPath
 ---@field push fun(self: LyraPath, name: string)
@@ -29,6 +30,17 @@
 ---@field home LyraPath
 ---@field name string
 
+---@class LyraStateVarsTermWindowSize
+---@field row integer
+---@field col integer
+---@field xpixel integer
+---@field ypixel integer
+
+---@class LyraStateVarsTerm
+---@field in_raw_mode boolean
+---@field in_alternate_screen boolean
+---@field winsize LyraStateVarsTermWindowSize
+
 ---@class LyraStateVars
 ---@field error integer
 ---@field debug boolean
@@ -36,17 +48,22 @@
 ---@field cwd LyraPath
 ---@field host string
 ---@field user LyraStateVarsUser
+---@field term LyraStateVarsTerm
 
 ---@class LyraState
 ---@field is_running boolean
 ---@field reload boolean
 ---@field vars LyraStateVars
 
+---@alias LyraInputKeyKind "none"|"letter"|"modifier"|"special"
+---@alias LyraInputModifier "shift"|"alt"|"ctrl"
+---@alias LyraInputSpecialKey "up"|"down"|"right"|"left"|"enter"|"tab"|"backspace"|"escape"|"delete"|"insert"|"home"|"end"|"page_up"|"page_down"|"f1"|"f2"|"f3"|"f4"|"f5"|"f6"|"f7"|"f8"|"f9"|"f10"|"f11"|"f12"
+
 ---@class LyraInputKey
----@field kind "none"|"letter"|"modifier"|"special"
+---@field kind LyraInputKeyKind
 ---@field letter string|nil
----@field modifier "shift"|"alt"|"ctrl"|nil
----@field special "up"|"down"|"right"|"left"|"enter"|"tab"|"backspace"|"escape"|"delete"|"insert"|"home"|"end"|"page_up"|"page_down"|"f1"|"f2"|"f3"|"f4"|"f5"|"f6"|"f7"|"f8"|"f9"|"f10"|"f11"|"f12"|nil
+---@field modifier LyraInputModifier|nil
+---@field special LyraInputSpecialKey|nil
 ---@field modifiers integer
 ---@field shift boolean
 ---@field alt boolean
@@ -58,16 +75,19 @@
 ---@field write fun(self: LyraPipe, data: string)
 
 ---@class LyraFile
+---@field open fun(self: LyraFile, path: LyraPath, mode: LyraOpenMode)
 ---@field close fun(self: LyraFile)
 ---@field write fun(self: LyraFile, data: string)
 ---@field read fun(self: LyraFile): string
 ---@field get_fd fun(self: LyraFile): integer
 
+---@alias LyraOpenMode integer|"r"|"w"|"a"|"r+"|"w+"|"a+"
+
 ---@class LyraIoApi
 ---@field pipe fun(): LyraPipe
 ---@field stderr fun(): LyraFile
 ---@field stdout fun(): LyraFile
----@field open fun(path: LyraPath, mode: integer|string): LyraFile
+---@field open fun(path: LyraPath, mode: LyraOpenMode): LyraFile
 
 ---@alias LyraProcessBindable LyraPipe|LyraFile|table
 
@@ -88,8 +108,10 @@
 ---@field WRITE integer
 ---@field ERROR integer
 
+---@alias LyraLogLevel "error"|"warn"|"debug"|"trace"|string
+
 ---@class LyraLogApi
----@field log fun(level: string)
+---@field log fun(level: LyraLogLevel)
 ---@field error fun(msg: string)
 ---@field warn fun(msg: string)
 ---@field debug fun(msg: string)
@@ -113,26 +135,89 @@
 ---@field api LyraCoreApi
 ---@field state LyraState
 
+---@alias LyraFrontTokenType "argument"|"command"|"debug"|"error"|"fd"|"identifier"|"lua_code"|"pipe"|"redir"|"str"|"string"|"undefined"
+
+---@class LyraFrontToken
+---@field span integer[]
+---@field val string
+---@field type LyraFrontTokenType|string
+---@field error string|nil
+
+---@class LyraFrontProcess
+---@field val LyraFrontToken[]
+---@field type "process"
+
+---@class LyraFrontLuaStatement
+---@field val string
+---@field type "lua"
+
+---@class LyraFrontShellStatement
+---@field val table[]
+---@field type "statement"
+
+---@alias LyraFrontStatement LyraFrontLuaStatement|LyraFrontShellStatement
+
+---@class LyraFrontChunk
+---@field val LyraFrontStatement[]
+---@field type "chunk"
+---@field debug boolean
+
+---@class LyraLangDebug
+---@field print_tokens fun(tokens: LyraFrontToken[])
+
+---@class LyraLang
+---@field debug LyraLangDebug
+---@field parse fun(tokens?: LyraFrontToken[]): LyraFrontChunk
+---@field run fun(tree: LyraFrontChunk|LyraFrontStatement|nil)
+---@field tokenize fun(input: string): LyraFrontToken[]
+
 ---@class LyraBuiltinApi
----@field cd fun(args: string[]|nil)
+---@field cd fun(args?: string[])
 ---@field lua fun(args: string[])
+
+---@class LyraColorApi
+---@field full_color fun(r: integer, g: integer, b: integer): string
+---@field reset_color fun(): string
+
+---@class LyraTokenColorNames
+---@field string string
+---@field identifier string
+---@field pipe string
+---@field redir string
+
+---@class LyraColorNames
+---@field black string
+---@field red string
+---@field green string
+---@field yellow string
+---@field blue string
+---@field magenta string
+---@field cyan string
+---@field white string
+---@field reset string
+---@field tokens LyraTokenColorNames
 
 ---@class LyraApi: LyraCoreApi
 ---@field lang LyraLang
 ---@field render_input fun(data: string, index: integer)
----@field expand_path fun(path: string|nil): LyraPath
+---@field format_tokens fun(src: string, tokens: LyraFrontToken[]): string
+---@field expand_path fun(path?: string): LyraPath
 ---@field format_path fun(path: LyraPath): string
----@field full_color fun(r: integer, g: integer, b: integer): string
----@field reset_color fun(): string
+---@field color LyraColorApi
+---@field reload fun()
+---@field exit fun()
 ---@field prompt fun(): string
 ---@field builtin LyraBuiltinApi
+
+---@class LyraVars: LyraStateVars
+---@field color_names LyraColorNames
 
 ---@class Lyra
 ---@field core LyraCore
 ---@field state LyraState
 ---@field plugin LyraPluginApi
 ---@field api LyraApi
----@field vars LyraStateVars
+---@field vars LyraVars
 
 ---@type Lyra
 lyra = lyra
