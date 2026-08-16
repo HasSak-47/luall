@@ -89,9 +89,15 @@ void init_shell_event_handler() {
         .owner = {},
         .hooks = {},
     });
+    struct HookData hd_signal = ((struct HookData){
+        .event = (struct Event){.kind = EVENT_SIGNAL, .name = {}},
+        .owner = {},
+        .hooks = {},
+    });
     vector_push(state.event.hooks, hd_enter);
     vector_push(state.event.hooks, hd_exit);
     vector_push(state.event.hooks, hd_input);
+    vector_push(state.event.hooks, hd_signal);
 }
 
 void init_shell_config(const char* config_path, const char* cache_path) {

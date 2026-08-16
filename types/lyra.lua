@@ -69,6 +69,12 @@
 ---@field alt boolean
 ---@field ctrl boolean
 
+---@alias LyraSignalName "int"|"term"|"cont"|"quit"|"hup"|"chld"|"alrm"|"pipe"|"segv"|"fpe"|"abrt"|"usr1"|"usr2"|"window_change"|"unknown"
+
+---@class LyraSignal
+---@field code integer
+---@field name LyraSignalName
+
 ---@class LyraPipe
 ---@field close fun(self: LyraPipe)
 ---@field read fun(self: LyraPipe): string
@@ -117,7 +123,7 @@
 ---@field debug fun(msg: string)
 ---@field trace fun(msg: string)
 
----@alias LyraOnEvent fun(event: "enter"|"exit", cb: fun())|fun(event: "key_input", cb: fun(input: LyraInputKey))
+---@alias LyraOnEvent fun(event: "enter"|"exit", cb: fun())|fun(event: "key_input", cb: fun(input: LyraInputKey))|fun(event: "signal", cb: fun(signal: LyraSignal))
 
 ---@class LyraCoreApi
 ---@field process LyraProcessApi

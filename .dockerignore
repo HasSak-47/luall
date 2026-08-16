@@ -1,0 +1,6 @@
+.git
+.ignore
+target
+lyra
+compile_flags.txt
+vgcore.*

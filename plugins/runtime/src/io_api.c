@@ -155,7 +155,7 @@ static int lua_pipe_read(lua_State* L) {
     free(s);
     free(str.data);
 
-    return 0;
+    return 1;
 }
 
 static int lua_pipe_write(lua_State* L) {

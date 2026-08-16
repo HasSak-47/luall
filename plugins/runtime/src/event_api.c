@@ -22,6 +22,9 @@ int add_lua_event(lua_State* L) {
     else if (strcmp(event_string, "exit") == 0) {
         event.kind = EVENT_EXIT;
     }
+    else if (strcmp(event_string, "signal") == 0) {
+        event.kind = EVENT_SIGNAL;
+    }
 
     luaL_checktype(L, 2, LUA_TFUNCTION);
     int reference = luaL_ref(L, LUA_REGISTRYINDEX);

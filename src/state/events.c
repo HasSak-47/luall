@@ -124,6 +124,9 @@ struct Event hook_enter() {
 struct Event hook_exit() {
     return (struct Event){.kind = EVENT_EXIT, .name = {}};
 }
+struct Event hook_signal() {
+    return (struct Event){.kind = EVENT_SIGNAL, .name = {}};
+}
 struct Event hook_user(struct String name) {
     return (struct Event){.kind = EVENT_USER_DEFINED, .name = name};
 }

@@ -113,9 +113,18 @@ local function handle_input(input)
     lyra.api.render_input(input_state.data, input_state.index)
 end
 
+---@param signal LyraSignal
+---@return nil
+local function handle_signal(signal)
+    if signal.name == "window_change" then
+        lyra.api.render_input(input_state.data, input_state.index)
+    end
+end
+
 lyra.api.on_event("enter", lyra.api.set_raw_mode)
 lyra.api.on_event("exit", lyra.api.unset_raw_mode)
 lyra.api.on_event("enter", function()
     lyra.api.render_input(input_state.data, input_state.index)
 end)
 lyra.api.on_event("key_input", handle_input)
+lyra.api.on_event("signal", handle_signal)

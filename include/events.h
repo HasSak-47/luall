@@ -54,6 +54,7 @@ struct Hook {
 struct Event hook_input();
 struct Event hook_enter();
 struct Event hook_exit();
+struct Event hook_signal();
 struct Event hook_user(struct String name);
 
 typedef int (*PushEventArg)(lua_State* L, void* data);

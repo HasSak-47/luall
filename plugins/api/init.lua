@@ -48,6 +48,101 @@ local function reset_color()
     return "\27[0m"
 end
 
+---@param value integer
+---@param min integer
+---@param max integer
+---@return integer
+local function clamp(value, min, max)
+    if value < min then
+        return min
+    end
+
+    if value > max then
+        return max
+    end
+
+    return value
+end
+
+---@param text string
+---@return string
+local function strip_ansi(text)
+    return text:gsub("\27%[[%d;]*[A-Za-z]", "")
+end
+
+---@return integer
+local function terminal_columns()
+    local ok, cols = pcall(function()
+        return lyra.vars.term.winsize.col
+    end)
+
+    if not ok or cols == nil or cols < 1 then
+        return 80
+    end
+
+    return cols
+end
+
+---@param width integer
+---@param cols integer
+---@return integer
+local function screen_row(width, cols)
+    return math.floor(width / cols)
+end
+
+---@param width integer
+---@param cols integer
+---@return integer
+local function screen_col(width, cols)
+    return width % cols
+end
+
+---@param width integer
+---@param cols integer
+---@return integer
+local function screen_rows(width, cols)
+    return math.floor(width / cols) + 1
+end
+
+---@param text string
+---@param cols integer
+---@return string
+local function wrap_ansi(text, cols)
+    local rendered = {}
+    local visible_col = 0
+    local index = 1
+
+    while index <= #text do
+        local byte = text:byte(index)
+        if byte == 27 and text:sub(index + 1, index + 1) == "[" then
+            local _, finish = text:find("\27%[[%d;]*[A-Za-z]", index)
+            if finish ~= nil then
+                table.insert(rendered, text:sub(index, finish))
+                index = finish + 1
+            else
+                table.insert(rendered, text:sub(index, index))
+                visible_col = visible_col + 1
+                index = index + 1
+            end
+        else
+            if visible_col == cols then
+                table.insert(rendered, "\r\n")
+                visible_col = 0
+            end
+
+            table.insert(rendered, text:sub(index, index))
+            visible_col = visible_col + 1
+            index = index + 1
+        end
+    end
+
+    if visible_col == cols then
+        table.insert(rendered, "\r\n")
+    end
+
+    return table.concat(rendered)
+end
+
 local color_names = {
     black   = "\27[30m",
     red     = "\27[31m",
@@ -122,18 +217,59 @@ local function format_tokens(src, tokens)
     return src
 end
 
+local last_render_width = 0
+local last_render_cursor_width = 0
 
 ---@return nil
 local function render_input(data, index)
-    local tokens = lyra.api.lang.tokenize(data)
-    io.stdout:write("\r" .. lyra.api.prompt() .. format_tokens(data, tokens))
-    io.stdout:write("\27[K")
+    index = clamp(index, 0, data:len())
 
-    local step_back = data:len() - index
-    if step_back > 0 then
-        io.stdout:write(string.format("\27[%dD", step_back))
+    local cols = terminal_columns()
+    local prompt = lyra.api.prompt()
+    local prompt_width = strip_ansi(prompt):len()
+    local visible_width = prompt_width + data:len()
+    local rows = screen_rows(visible_width, cols)
+    local cursor_width = prompt_width + index
+    local cursor_row = screen_row(cursor_width, cols)
+    local cursor_col = screen_col(cursor_width, cols)
+    local end_row = screen_row(visible_width, cols)
+    local last_rows = screen_rows(last_render_width, cols)
+    local last_cursor_row = screen_row(last_render_cursor_width, cols)
+    local clear_rows = math.max(last_rows, rows)
+
+    if last_cursor_row > 0 then
+        io.stdout:write(string.format("\r\27[%dA", last_cursor_row))
+    else
+        io.stdout:write("\r")
     end
 
+    for row = 1, clear_rows do
+        io.stdout:write("\27[2K")
+        if row < clear_rows then
+            io.stdout:write("\27[1B\r")
+        end
+    end
+
+    if clear_rows > 1 then
+        io.stdout:write(string.format("\r\27[%dA", clear_rows - 1))
+    else
+        io.stdout:write("\r")
+    end
+
+    io.stdout:write(wrap_ansi(prompt .. format_tokens(data, lyra.api.lang.tokenize(data)), cols))
+    io.stdout:write("\27[K")
+
+    if end_row > cursor_row then
+        io.stdout:write(string.format("\27[%dA", end_row - cursor_row))
+    end
+
+    io.stdout:write("\r")
+    if cursor_col > 0 then
+        io.stdout:write(string.format("\27[%dC", cursor_col))
+    end
+
+    last_render_width = visible_width
+    last_render_cursor_width = cursor_width
     io.stdout:flush()
 end
 

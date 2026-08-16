@@ -166,8 +166,8 @@ static void pipe_bind(struct Pipe* handler, enum ProcessBindKind kind) {
     }
 }
 
-static void lua_bind(struct LuaBind handler, enum ProcessBindKind kind) {
-    lua_rawgeti(state.L, LUA_REGISTRYINDEX, handler.reference);
+static void lua_bind(struct LuaBind* handler, enum ProcessBindKind kind) {
+    lua_rawgeti(state.L, LUA_REGISTRYINDEX, handler->reference);
     lua_getfield(state.L, -1, "bind");
 
     if (!lua_isfunction(state.L, -1)) {
@@ -182,8 +182,8 @@ static void lua_bind(struct LuaBind handler, enum ProcessBindKind kind) {
     }
 }
 
-static void lua_bind_delete(struct LuaBind handler) {
-    luaL_unref(state.L, LUA_REGISTRYINDEX, handler.reference);
+static void lua_bind_delete(struct LuaBind* handler) {
+    luaL_unref(state.L, LUA_REGISTRYINDEX, handler->reference);
 }
 
 static void noop(void* data) {}
